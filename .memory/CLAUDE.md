@@ -343,14 +343,70 @@ Nginx (80/443)
 
 ## 12. CI/CD 与版本控制(2026-06-08 已搭建)
 
-### 12.1 仓库
+### 12.1 远程仓库(2026-06-08 已推送)
+
+- **GitHub**:https://github.com/xutao5596/ai-platform
+- **默认分支**:main
+- **协议**:SSH(本机 HTTPS 443 端口被阻止)
+- **已推送**:2 commits + main + develop + v0.1.0 tag
+- **35 个文件,~7,140 行**
+
+### 12.2 仓库(本地)
 
 - 已初始化 Git 仓库(本地)
 - 默认分支:`main`(生产)+ `develop`(开发)
 - 提交规范:Conventional Commits
 - 分支策略:见 `docs/GIT-WORKFLOW.md`
 
-### 12.2 CI/CD 文件
+### 12.3 本机网络环境(重要!)
+
+```
+端口 22 (SSH)  ✅ 可用 ← 使用
+端口 80 (HTTP) ✅ 可用
+端口 443 (HTTPS) ❌ 被阻止 → 不能用 HTTPS
+DNS 解析      ⚠️ 本地 DNS 不可用,但 git 仍可解析(走系统)
+```
+
+**结论**:所有 git 操作必须使用 SSH 协议。
+
+### 12.4 SSH 密钥配置(本机特殊)
+
+由于 Windows OpenSSH agent 服务被禁用(权限受限),**不能**用 ssh-agent,改为:
+
+```bash
+git config core.sshCommand '"/c/Windows/System32/OpenSSH/ssh.exe" -i /c/Users/10099/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new'
+```
+
+**注意**:使用正斜杠(`/`)和 Git Bash 风格路径(`/c/Users/...`)。
+
+### 12.5 日常推送命令(必须遵守)
+
+```bash
+# 1. 进入项目
+cd D:\Projet\AI-Platform
+
+# 2. 拉取最新
+git checkout develop
+git pull origin develop
+
+# 3. 创建功能分支
+git checkout -b feature/AI-XXX-description
+
+# 4. 开发 + 提交
+git add .
+git commit -m "feat(scope): description"
+
+# 5. 推送
+git push -u origin feature/AI-XXX-description
+
+# 6. 在 GitHub 创建 PR(feature → develop)
+```
+
+### 12.6 完整推送工作流(详见 docs/OPERATIONS.md)
+
+文档: `docs/OPERATIONS.md`(包含完整命令、故障排查、SSH 配置等)
+
+### 12.7 CI/CD 文件
 
 ```
 .github/
@@ -365,7 +421,7 @@ Nginx (80/443)
 .gitlab-ci.yml          # GitLab CI 替代方案
 ```
 
-### 12.3 部署脚本
+### 12.8 部署脚本
 
 ```
 ai-deploy/
@@ -385,7 +441,7 @@ ai-deploy/
     └── docker-compose.yml
 ```
 
-### 12.4 CI/CD 工作流
+### 12.9 CI/CD 工作流
 
 ```
 push to develop → CI (lint/test/build) → 自动部署到 staging
