@@ -444,4 +444,151 @@ Week 12+    →  二期规划(P2 功能)
 
 ---
 
+## 15. Agent 执行策略(混合模式)
+
+> 本节定义项目开发中**多 Agent 协作**的执行模式(2026-06-08 决策)。
+> 详见 [`docs/AGENT-WORKFLOW.md`](AGENT-WORKFLOW.md)
+
+### 15.1 三种执行模式对比
+
+| 模式 | 优点 | 缺点 | 适用 |
+|---|---|---|---|
+| **单 Agent 串行** | 简单、无冲突、便于追溯 | 慢、CPU 闲置 | 小项目 / 单人 |
+| **多 Agent 全并行** | 极快 | 协调复杂、上下文难共享、易冲突 | 完全独立任务 |
+| **混合模式(本项目)** | 快 + 有序 | 需要任务规划 | **推荐** |
+
+### 15.2 本项目采用:基础串行 + 模块并行 + 联调串行
+
+```
+阶段 1: 基础搭建(串行,1 周)
+  ↓
+阶段 2: 模块开发(并行,5 周)
+  ↓
+阶段 3: 联调上线(串行,2 周)
+```
+
+### 15.3 各 Sprint Agent 配置
+
+| Sprint | Agent 数 | 执行模式 | 主要任务 |
+|---|---|---|---|
+| **Sprint 0** | 1 个 | 串行 | 技术预研 + 基础脚手架 |
+| **Sprint 1** | 3 个(后端A + 后端B + 前端) | 并行(按模块边界) | 系统管理 + 项目域 |
+| **Sprint 2** | 3 个(架构师 + 后端B + 前端) | 并行(按模块边界) | AI 引擎 + 知识库 + 对话 |
+| **Sprint 3** | 3 个(架构师 + 后端B + 前端) | 并行(按模块边界) | 流程引擎 + 助手 + 触发器 |
+| **Sprint 4** | 1-2 个 | 串行 | API Key + Webhook + 联调 + 部署 |
+
+### 15.4 阶段 1:基础搭建(串行)
+
+**唯一 1 个 Agent 负责**(后端架构师 + 前端主程协作,但任务串行)
+
+```
+Sprint 0 - Week 0
+├─ [后端架构师] 后端多模块工程 + ai-common + ai-framework
+├─ [后端架构师] MyBatis Plus + Druid + Caffeine + Shiro + JWT
+├─ [前端主程] Vue3 + Vite + Element Plus 脚手架
+└─ [前端主程] 路由 + Pinia + Axios + 登录 + 主布局
+
+Sprint 1 - Week 1 前半
+├─ [后端A] sys_user/role/menu/dept/dict/log CRUD
+└─ [前端开发] 系统管理 10 个页面
+```
+
+> **为什么串行**:基础是其他模块的依赖,必须先就位。
+
+### 15.5 阶段 2:模块开发(并行)
+
+**Sprint 1 后期 + Sprint 2-3,并行 Agent 分工**
+
+| Agent | 负责模块 | 路径 |
+|---|---|---|
+| Agent A(后端A + 部分前端) | 系统管理 + 项目域 | `ai-system/`、`ai-project/`、`views/system/` |
+| Agent B(后端B + 部分前端) | AI 业务 + 流程 | `ai-ai/`、`ai-flow/`、`views/knowledge/`、`views/prompt/` |
+| Agent C(后端架构师 + 前端主程) | 助手 + 流程编辑器 + 触发器 | `ai-assistant/`、`views/flow/editor/` |
+
+**并行规则**:
+- ✅ 允许:不同 Agent 操作不同模块
+- ❌ 禁止:同时修改同一文件
+- ⚠️ 共享文件(API 契约、配置):先约定,后实现
+- 🔄 每日 merge develop 一次,避免长期分叉
+
+### 15.6 阶段 3:联调上线(串行)
+
+```
+Sprint 4 - Week 7-8
+├─ [全团队] 前后端联调
+├─ [测试] 性能压测
+├─ [全团队] Bug 修复
+└─ [DevOps] 部署上线
+```
+
+> **为什么串行**:联调需要紧密协作,串行避免沟通混乱。
+
+### 15.7 关键约束
+
+#### 约束 1:API 契约先行
+
+并行前必须先有 OpenAPI/YAML 规范:
+
+```yaml
+/api/v1/ai/flow/{id}/run:
+  post:
+    parameters:
+      - name: id
+        in: path
+        required: true
+    requestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RunFlowRequest'
+    responses:
+      200:
+        schema:
+          $ref: '#/components/schemas/RunFlowResponse'
+```
+
+#### 约束 2:模块边界清晰
+
+```json
+// .claude/agents/system-agent.json
+{
+  "name": "system-agent",
+  "scope": ["ai-system/**", "ai-project/**", "docs/SOW.md"],
+  "rules": [
+    "不修改 ai-flow/、ai-ai/ 代码",
+    "公共文件修改需声明"
+  ]
+}
+```
+
+#### 约束 3:共享文件修改声明
+
+需要修改公共文件(`pom.xml`、`vite.config.ts`、`application.yml`)时:
+1. 在群组 / Issue 中声明
+2. 等待其他人确认无冲突
+3. 单人改完后立即 commit + push
+4. CI 自动验证不破坏其他模块构建
+
+### 15.8 协调机制
+
+| 协调方式 | 频率 | 工具 |
+|---|---|---|
+| 站会 | 每日 9:30 (15 min) | 腾讯会议 / 飞书 |
+| 周会 | 每周一 10:00 (1h) | 同上 |
+| 合并冲突实时解决 | 即时 | 群组 / PR 评论 |
+| CI 自动验证 | 每次 push | GitHub Actions |
+| 文档同步 | 每日 17:00 | 约定 / 文档平台 |
+
+### 15.9 风险与应对
+
+| 风险 | 应对 |
+|---|---|
+| 并行 Agent 改同一文件 | 严格模块边界 + 共享文件修改声明 |
+| API 契约变更未通知 | 每次 API 变更必须发群通知 + 更新 OpenAPI 文档 |
+| 上下文不一致 | 每日 merge develop + 文档同步 |
+| 测试覆盖不足 | 每个 PR 必须有对应测试,CI 卡门禁 |
+| 代码风格不一致 | 提交前 ESLint/Checkstyle 检查 |
+
+---
+
 **PLAN 终**
