@@ -1,0 +1,46 @@
+# ====================================================================
+# AI-Platform Backend specific .gitignore
+# ====================================================================
+
+# Maven
+target/
+*.jar
+*.war
+.flattened-pom.xml
+
+# Spring Boot
+spring-boot-*.jar
+application-*.yml
+!application-dev.yml
+!application-prod.yml
+!application.yml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Logs
+logs/
+*.log
+
+# Test Reports
+test-output/
+test-report/
+surefire-reports/
+jacoco.exec
+jacoco-it.exec
+
+# Generated
+generated/
+generated-sources/
+generated-test-sources/
+
+# Local data
+/data/
+*.h2.db
+*.mv.db
+*.trace.db

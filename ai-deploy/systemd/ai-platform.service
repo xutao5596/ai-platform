@@ -1,0 +1,51 @@
+# ====================================================================
+# AI-Platform systemd service file
+# Install: sudo cp ai-platform.service /etc/systemd/system/
+# Enable:  sudo systemctl enable ai-platform
+# Start:   sudo systemctl start ai-platform
+# ====================================================================
+
+[Unit]
+Description=AI Platform Backend Service
+Documentation=https://github.com/your-org/ai-platform
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=aiplatform
+Group=aiplatform
+WorkingDirectory=/opt/ai-platform
+
+# Java 21 + Production
+Environment="JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
+Environment="SPRING_PROFILES_ACTIVE=prod"
+Environment="JAVA_OPTS=-Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dfile.encoding=UTF-8"
+
+# Start command
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/ai-platform/bin/ai-start-1.0.0.jar \
+    --spring.config.location=/opt/ai-platform/conf/application.yml
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=65535
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ai-platform
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ai-platform /data
+
+[Install]
+WantedBy=multi-user.target

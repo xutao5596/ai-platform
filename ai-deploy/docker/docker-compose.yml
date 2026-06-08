@@ -1,0 +1,123 @@
+# ====================================================================
+# AI-Platform Docker Compose
+# Usage:
+#   docker-compose up -d          # Start
+#   docker-compose down            # Stop
+#   docker-compose logs -f         # View logs
+#   docker-compose ps              # Status
+# ====================================================================
+
+version: '3.8'
+
+services:
+  # ==================================================================
+  # MariaDB
+  # ==================================================================
+  mariadb:
+    image: mariadb:12.2
+    container_name: ai-platform-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: ai_platform
+      MARIADB_CHARACTER_SET: utf8mb4
+      MARIADB_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ai-net
+
+  # ==================================================================
+  # Backend
+  # ==================================================================
+  backend:
+    build:
+      context: ..
+      dockerfile: ai-deploy/docker/Dockerfile.backend
+    image: ai-platform-backend:1.0.0
+    container_name: ai-platform-backend
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/ai_platform
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      AI_DATA_UPLOAD_PATH: /data/upload
+      AI_DATA_HNSW_PATH: /data/hnsw
+      AI_DATA_LOG_PATH: /data/logs
+      JAVA_OPTS: "-Xms512m -Xmx2g -XX:+UseG1GC"
+    ports:
+      - "8080:8080"
+    volumes:
+      - hnsw_data:/data/hnsw
+      - upload_data:/data/upload
+      - log_data:/data/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - ai-net
+
+  # ==================================================================
+  # Frontend
+  # ==================================================================
+  frontend:
+    build:
+      context: ..
+      dockerfile: ai-deploy/docker/Dockerfile.frontend
+    image: ai-platform-frontend:1.0.0
+    container_name: ai-platform-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - ai-net
+
+  # ==================================================================
+  # (Optional) Redis - if needed in future
+  # ==================================================================
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: ai-platform-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - ai-net
+
+volumes:
+  mariadb_data:
+    driver: local
+  hnsw_data:
+    driver: local
+  upload_data:
+    driver: local
+  log_data:
+    driver: local
+  # redis_data:
+  #   driver: local
+
+networks:
+  ai-net:
+    driver: bridge

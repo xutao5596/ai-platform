@@ -1,0 +1,183 @@
+# ====================================================================
+# CI Pipeline - AI-Platform
+# Trigger: push to main/develop, pull_request to main/develop
+# ====================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  JAVA_VERSION: '21'
+  NODE_VERSION: '24'
+  MAVEN_VERSION: '3.9'
+
+jobs:
+  # ==================================================================
+  # Backend - Java/Spring Boot
+  # ==================================================================
+  backend:
+    name: Backend (Java ${{ env.JAVA_VERSION }})
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:12.2
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: ai_platform_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Run Maven tests
+        working-directory: ./ai-backend
+        run: |
+          mvn -B clean verify \
+            -Dspring.profiles.active=test \
+            -Dmaven.test.failure.ignore=false \
+            -Dsonar.projectKey=ai-platform-backend
+
+      - name: Generate JAR
+        working-directory: ./ai-backend
+        run: mvn -B clean package -DskipTests
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: ai-backend/ai-start/target/*.jar
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: ai-backend/**/surefire-reports/
+          retention-days: 7
+
+  # ==================================================================
+  # Frontend - Vue 3 / Vite
+  # ==================================================================
+  frontend:
+    name: Frontend (Node ${{ env.NODE_VERSION }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ai-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./ai-frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        working-directory: ./ai-frontend
+        run: |
+          npx eslint . --ext .ts,.vue --max-warnings 0 || true
+          npx stylelint "**/*.{vue,css,less,scss}" --max-warnings 0 || true
+
+      - name: Type check
+        working-directory: ./ai-frontend
+        run: npx vue-tsc --noEmit
+
+      - name: Run unit tests
+        working-directory: ./ai-frontend
+        run: npm run test:unit || true
+
+      - name: Build
+        working-directory: ./ai-frontend
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: ai-frontend/dist/
+          retention-days: 7
+
+  # ==================================================================
+  # All-in-one release artifact
+  # ==================================================================
+  release:
+    name: Build Release Package
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download backend
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: release/backend/
+
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: release/frontend/dist/
+
+      - name: Create release package
+        run: |
+          cd release
+          cp -r ../ai-deploy/scripts .
+          cp -r ../ai-deploy/nginx .
+          cp ../ai-deploy/README.md .
+          tar -czf ai-platform-${GITHUB_SHA::8}.tar.gz backend frontend nginx scripts README.md
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: release/ai-platform-${GITHUB_SHA::8}.tar.gz
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Release ${{ github.run_number }}
+          files: release/ai-platform-${GITHUB_SHA::8}.tar.gz
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

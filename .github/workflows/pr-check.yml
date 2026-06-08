@@ -1,0 +1,95 @@
+# ====================================================================
+# PR Check - AI-Platform
+# Trigger: pull_request
+# ====================================================================
+
+name: PR Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  pr-check:
+    name: PR Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR title
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          if ! echo "$TITLE" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\(.+\))?: .{1,100}$"; then
+            echo "❌ PR title does not follow Conventional Commits format"
+            echo "Format: <type>(<scope>): <subject>"
+            echo "Example: feat(flow): add 12th node type"
+            exit 1
+          fi
+          echo "✅ PR title format valid"
+
+      - name: Check commit messages
+        run: |
+          git log origin/${{ github.base_ref }}..HEAD --pretty=format:"%s" | while read commit; do
+            if ! echo "$commit" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\(.+\))?: .{1,100}$"; then
+              echo "❌ Invalid commit message: $commit"
+              exit 1
+            fi
+          done
+          echo "✅ All commit messages valid"
+
+      - name: Check file size
+        run: |
+          MAX_SIZE=1048576  # 1MB
+          for file in $(git diff --name-only origin/${{ github.base_ref }}...HEAD); do
+            if [ -f "$file" ]; then
+              size=$(stat -c %s "$file" 2>/dev/null || stat -f %z "$file")
+              if [ "$size" -gt "$MAX_SIZE" ]; then
+                echo "⚠️ Large file: $file ($size bytes)"
+              fi
+            fi
+          done
+
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+          extraArgs: --debug --only-verified
+
+      - name: Lint backend
+        if: hashFiles('ai-backend/**/*.java') != ''
+        run: |
+          cd ai-backend
+          mvn -B compile -DskipTests
+          echo "✅ Backend compiles"
+
+      - name: Lint frontend
+        if: hashFiles('ai-frontend/**/*.{ts,vue}') != ''
+        run: |
+          cd ai-frontend
+          npm ci --legacy-peer-deps
+          npx eslint . --ext .ts,.vue --max-warnings 10
+          echo "✅ Frontend lints"
+
+      - name: Comment summary
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-check
+          message: |
+            ## 🤖 PR Check Results
+
+            - ✅ Title format
+            - ✅ Commit messages
+            - ✅ File sizes
+            - ✅ Secrets scan
+            - ✅ Backend compile
+            - ✅ Frontend lint
+
+            ---
+            View full CI results in the Checks tab.

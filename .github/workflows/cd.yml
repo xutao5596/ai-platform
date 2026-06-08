@@ -1,0 +1,194 @@
+# ====================================================================
+# CD Pipeline - AI-Platform
+# Trigger: manual / tag push
+# ====================================================================
+
+name: CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      version:
+        description: 'Version tag (e.g. v1.0.0)'
+        required: false
+        type: string
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  PROJECT_NAME: ai-platform
+
+jobs:
+  # ==================================================================
+  # Deploy to Staging
+  # ==================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: ai-frontend/package-lock.json
+
+      - name: Build backend
+        working-directory: ./ai-backend
+        run: mvn -B clean package -DskipTests
+
+      - name: Build frontend
+        working-directory: ./ai-frontend
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy/backend deploy/frontend deploy/scripts deploy/nginx
+          cp ai-backend/ai-start/target/*.jar deploy/backend/
+          cp -r ai-frontend/dist/* deploy/frontend/
+          cp -r ai-deploy/scripts/* deploy/scripts/
+          cp -r ai-deploy/nginx/* deploy/nginx/
+          cd deploy && tar -czf ai-platform-staging-${{ github.sha }}.tar.gz backend frontend scripts nginx
+
+      - name: Deploy to staging server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: "deploy/ai-platform-staging-${{ github.sha }}.tar.gz"
+          target: "/tmp/deploy/"
+          strip_components: 0
+
+      - name: Execute deployment
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -e
+            cd /tmp/deploy
+            tar -xzf ai-platform-staging-${{ github.sha }}.tar.gz
+            sudo /opt/ai-platform/scripts/deploy.sh staging
+            echo "✅ Staging deployment complete"
+
+      - name: Smoke test
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            sleep 10
+            curl -f http://localhost:8080/actuator/health || exit 1
+            echo "✅ Health check passed"
+
+  # ==================================================================
+  # Deploy to Production
+  # ==================================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy/backend deploy/frontend deploy/scripts deploy/nginx
+          cp ai-backend/ai-start/target/*.jar deploy/backend/
+          cp -r ai-frontend/dist/* deploy/frontend/
+          cp -r ai-deploy/scripts/* deploy/scripts/
+          cp -r ai-deploy/nginx/* deploy/nginx/
+          cd deploy && tar -czf ai-platform-prod-${{ github.sha }}.tar.gz backend frontend scripts nginx
+
+      - name: Backup current version
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -e
+            if [ -d /opt/ai-platform ]; then
+              sudo /opt/ai-platform/scripts/backup.sh
+              echo "✅ Backup complete"
+            fi
+
+      - name: Upload to production
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          source: "deploy/ai-platform-prod-${{ github.sha }}.tar.gz"
+          target: "/tmp/deploy/"
+
+      - name: Execute deployment
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -e
+            cd /tmp/deploy
+            tar -xzf ai-platform-prod-${{ github.sha }}.tar.gz
+            sudo /opt/ai-platform/scripts/deploy.sh production
+            echo "✅ Production deployment complete"
+
+      - name: Smoke test
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            sleep 15
+            curl -f http://localhost:8080/actuator/health || exit 1
+            echo "✅ Production health check passed"
+
+      - name: Notify deployment
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            AI-Platform Production Deployment
+            Status: ${{ job.status }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
