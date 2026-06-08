@@ -1,0 +1,70 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    uri-encoding: UTF-8
+    max-threads: 200
+    accept-count: 100
+
+spring:
+  application:
+    name: ai-platform
+  profiles:
+    active: dev
+  main:
+    allow-bean-definition-overriding: true
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+ai:
+  app:
+    name: AI Platform
+    version: 1.0.0
+    upload-path: ${user.dir}/data/upload
+    hnsw-path: ${user.dir}/data/hnsw
+    log-path: ${user.dir}/data/logs
+  jwt:
+    secret: ai-platform-jwt-secret-key-please-change-in-production-2026
+    issuer: ai-platform
+    access-ttl-seconds: 7200
+    refresh-ttl-seconds: 2592000
+
+logging:
+  level:
+    root: INFO
+    com.aiplatform: DEBUG
+    com.baomidou.mybatisplus: WARN
+  file:
+    name: ${ai.app.log-path}/ai-platform.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
