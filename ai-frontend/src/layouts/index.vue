@@ -98,7 +98,8 @@ const iconMap: Record<string, string> = {
   OfficeBuilding: 'OfficeBuilding',
   Collection: 'Collection',
   Document: 'Document',
-  Connection: 'Connection'
+  Connection: 'Connection',
+  Reading: 'Reading'
 }
 function resolveIcon(icon?: string) {
   if (!icon) return 'Menu'
