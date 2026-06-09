@@ -2,11 +2,7 @@ package com.aiplatform.assistant;
 
 /**
  * AI 助手模块占位。
- * Sprint 3 将实现:
- *  - tools/系统工具集
- *  - events/事件订阅
- *  - 会话 + 消息
- *  - SSE 流式输出
+ * 真实实现位于:entity / mapper / dto / tools / service / controller / event 子包。
  */
 public final class AssistantModulePlaceholder {
 
@@ -14,6 +10,6 @@ public final class AssistantModulePlaceholder {
     }
 
     public static String version() {
-        return "0.1.0-sprint1";
+        return "0.1.0-sprint3";
     }
 }
