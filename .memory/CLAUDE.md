@@ -23,20 +23,21 @@
 
 ### 1.1 当前进度(2026-06-09)
 
-- **Sprint 1 + Sprint 2 全部完成** — 后端 + 前端 + 联调 ✅
-- **Sprint 1**:后端 8 模块 + 16 张表(V1/V2) + JWT + 10 系统表 CRUD + 6 项目表 CRUD + @PreProjectRole + 14 前端页面 (v0.2.0)
-- **Sprint 2**:11 张 AI 表(V3/V4) + LangChain4j 1.9.1 + langchain4j-open-ai + Hnswlib PoC(实际用 in-memory 向量) + Tika 3.2.3 + 模型/知识库/提示词/AI 对话 完整 CRUD + 4 前端页面 (v0.3.0/v0.3.1)
-- **GitHub**:2 个 feature 分支 + 4 commits,已合并到 develop,tag v0.2.0 / v0.3.0 / v0.3.1 已推送
-- **Sprint 1 bug 修复**:
-  - `@PreProjectRole` aspect NPE(拆分 `@annotation` / `@within` 两个 advice)
-  - URI 模板变量解析(Spring `@PathVariable` 编译擦除)
-  - `separator` 是 MariaDB 关键字 → 改名 `sep`
-  - MyBatis Plus `insert-strategy: not_null` 导致 `deleted` 不写 SQL → 默认策略
-- **Sprint 3 启动**:
-  - FlowNode SPI + NodeRegistry + 12 节点 + 5 触发器
-  - 助手(Flow 复用 + assistant_event_sub)
-  - 流程编辑器(LogicFlow)
-  - 详见 `docs/PLAN.md` Week 5-6
+- **Sprint 1 + Sprint 2 + Sprint 3 全部完成** — 混合并行模式 3 Agent 联调成功 ✅
+- **Sprint 1**:后端 8 模块 + 16 张表 + JWT + 系统管理 + 项目域 + 14 前端页面 (v0.2.0)
+- **Sprint 2**:11 张 AI 表 + LangChain4j + 模型/知识库/提示词/对话 (v0.3.0/v0.3.1)
+- **Sprint 3**(本轮):
+  - **Agent A**:ai-flow 后端 — FlowNode SPI + NodeRegistry + 8 节点(start/end/llm/knowledge_search/prompt/if_else/http/set_var) + 5 触发器(manual/cron/webhook/event/chained) + 6 张表 + FlowRunner BFS 执行器
+  - **Agent B**:ai-assistant 后端 — 3 张表 + 8 工具(http/subflow/kb/list_projects/get_project_members/current_time/calculator/code_run) + 事件订阅 + prompt 引导式 tool calling + SSE 流
+  - **Agent C**:前端 LogicFlow 编辑器(三栏布局) + 流程列表/详情/执行历史 + 助手列表(占位 → 已补全)
+  - **联调**:Flow Start→End 跑通 + 8 节点定义 + 8 工具 + Calculator `(1+2)*3^2=27` ✅
+- **tag v0.4.0** 已推送
+- **已知问题(Sprint 3.1 修)**:
+  - tool calling 用 prompt 引导 JSON,生产应换 LangChain4j Function Calling
+  - Hnswlib 1.2.1 完整集成(Sprint 2 PoC 用 in-memory)
+  - FlowRunner 是 BFS 简化版,生产应换 LiteFlow
+  - 流式 token 输出(当前是分块重发)
+  - AiFlowRun.costMs 显示成 epoch 毫秒(误用 Long 字段)
 
 ---
 
@@ -350,7 +351,7 @@ Nginx (80/443)
 
 ## 11. 待办与开放问题
 
-### 11.1 Sprint 1 + Sprint 2 完成清单
+### 11.1 Sprint 1 + Sprint 2 + Sprint 3 完成清单
 
 #### ✅ Sprint 1(Day 1-2)
 - [x] 后端 8 模块 + 16 张表(V1/V2) + JWT + 系统管理 + 项目域
@@ -359,27 +360,17 @@ Nginx (80/443)
 
 #### ✅ Sprint 2(Day 3 2026-06-09)
 - [x] **后端**:11 张 AI 表(V3 7 张 + V4 4 张) + LangChain4j 1.9.1 + langchain4j-open-ai + Tika 3.2.3
-  - 模型 CRUD(全局) + 知识库 CRUD(项目) + 提示词版本管理 + AI 对话 SSE
-  - Hnswlib 1.2.1 API 改造太复杂,Sprint 2 简化为 in-memory 向量(后续替换)
-  - Embedding 简化为 hash-based 确定性向量 PoC(后续接真 embedding API)
 - [x] **前端**:4 页面(模型/知识库/提示词/AI 对话) + 完整 CRUD + 会话管理
-- [x] **bug 修复**:@PreProjectRole NPE、URI 模板变量、separator 关键字、insert-strategy
 - [x] v0.3.0 / v0.3.1 tag
 
-### 11.2 Sprint 3 待办(Week 5-6)
+#### ✅ Sprint 3(Day 3-4 2026-06-09)— 三 Agent 并行
+- [x] **Agent A(后端架构师)**:ai-flow — 6 张表 + FlowNode SPI + NodeRegistry(自动扫描) + 8 节点 + 5 触发器 + FlowRunner(BFS 执行)
+- [x] **Agent B(后端开发)**:ai-assistant — 3 张表 + 8 工具(http/subflow/kb/list_projects/get_project_members/current_time/calculator/code_run) + 事件订阅 + prompt 引导式 tool calling + SSE 流
+- [x] **Agent C(前端主程)**:LogicFlow 拖拽编辑器(3 栏) + 流程列表/详情/运行历史 + 助手页(SSE 工具调用展示)
+- [x] **联调**:Flow Start→End 跑通 + 8 节点定义 + 8 工具 + Calculator `(1+2)*3^2=27` ✅
+- [x] v0.4.0 tag
 
-- [ ] **流程 SPI**:FlowNode 接口 + NodeRegistry(自动扫描 + 热加载)
-- [ ] **流程引擎**:design → chain 转换器(LogicFlow JSON → LiteFlow XML)
-- [ ] **FlowExecutor**:执行编排 + 步骤记录
-- [ ] **12 节点**:start/end/llm/knowledge_search/prompt/agent/if_else/subflow/http/mcp_tool/script/set_var
-- [ ] **自定义节点**:用户自定义(HTTP/SQL/脚本)+ 开发者扩展(Java SPI)
-- [ ] **5 触发器**:Manual/Cron/Webhook/Event/Chained
-- [ ] **助手**:assistant_config CRUD + assistant_event_sub 事件订阅
-- [ ] **工具集**:10+ 系统工具(HTTP 调子流程、查项目、查知识库…)
-- [ ] **前端**:FlowEditor 三栏布局(LogicFlow 画布) + 节点配置表单 + 调试面板
-- [ ] **API Key** 简化版 + **Webhook** 投递
-
-### 11.3 Sprint 4 待办(Week 7-8)
+### 11.2 Sprint 4 待办(Week 7-8)
 
 - [ ] API Key 鉴权拦截器(限流、Sprint 2.2 已移除的 Bucket4j 重新选型)
 - [ ] Webhook 管理 + 投递 + 签名验证 + 重试
@@ -387,6 +378,15 @@ Nginx (80/443)
 - [ ] 部署脚本完善(systemd + nginx)
 - [ ] 主题切换(3 色 + 明暗)
 - [ ] 用户手册 + 压测
+
+### 11.3 Sprint 3.1 待办(技术债,可在 Sprint 4 之前修)
+
+- [ ] **tool calling 升级** LangChain4j Function Calling(替代 prompt 引导 JSON)
+- [ ] **Hnswlib 1.2.1 完整集成** 替换 in-memory 向量
+- [ ] **真实 embedding API** 替换 hash-based PoC
+- [ ] **LiteFlow 完整集成** 替换 BFS 简化版 FlowRunner
+- [ ] **SSE 真流式 token 输出** 替换分块重发
+- [ ] **AiFlowRun.costMs bug** 字段类型错(显示成 epoch 毫秒)
 
 ### 11.4 开放问题
 
@@ -526,6 +526,43 @@ ai-frontend/
 - **Bug 4**:`insert-strategy: not_null` 导致 unique 索引冲突
   - 原因:deleted 字段不写入 SQL,unique (provider, model_name, deleted) 区分不开
   - 修复:删除全局配置,使用 MyBatis Plus 默认(全部字段写入)
+
+### 14.8 Sprint 3 关键技术细节(2026-06-09)
+
+#### 14.8.1 流程引擎 (ai-flow)
+- **节点 SPI**:`FlowNode` 接口 (getTypeKey/getDisplayName/getCategory/getIcon/getColor/getSchema/execute)
+- **NodeRegistry**:Spring 启动时自动扫描所有 `@Component implements FlowNode`,按 typeKey 索引
+- **节点设计数据**:LogicFlow JSON 格式 (`{nodes: [...], edges: [...]}`)
+- **FlowRunner**:BFS 顺序执行器(Sprint 3.1 改 LiteFlow 正式版)
+- **5 触发器实现**:
+  - Manual: 同步调用
+  - Cron: Spring TaskScheduler + cron 表达式(Sprint 3.1 换 Quartz)
+  - Webhook: `/api/v1/webhook/flow/{token}` 接收,token → flowId 映射
+  - Event: 监听 ApplicationEvent(flow.run.success / failed)
+  - Chained: 内部服务调用入口
+- **8 内置节点**:start / end / llm / knowledge_search / prompt / if_else / http / set_var
+- **重要坑**:`@EventListener` 在 JDK 代理下失效(接口方法未被代理),必须用独立类(不实现接口,CGLIB 代理)
+
+#### 14.8.2 AI 助手 (ai-assistant)
+- **8 工具**:http_request / run_flow(子流程) / search_kb / list_projects / project_members / current_time / calculator / code_run
+- **ToolRegistry**:自动扫描 `@Component AssistantTool`
+- **tool calling 实现**:prompt 引导 LLM 输出 JSON `{"tool": "name", "args": {...}}` 解析 → 调工具 → 反馈 LLM(最多 5 轮防死循环)
+- **SSE 格式**:content / tool_call / tool_result / done 4 种事件
+- **Sprint 3.1**:换 LangChain4j Function Calling
+
+#### 14.8.3 前端 LogicFlow 集成
+- **依赖**:`@logicflow/core` + `@logicflow/extension` 2.2.3
+- **CSS 路径**:`dist/index.css`(2.x 改了路径)
+- **API**:`lf.register(nodeDef)` + `lf.render(empty)` + `lf.getGraphData()`
+- **节点数据**:从 `/api/v1/flow/node-definitions` 动态加载
+- **属性面板**:根据 `Property.type` 渲染不同控件(model/prompt/kb 下拉)
+
+#### 14.8.4 多 Agent 并行实战教训
+- **API 契约先行**:`docs/api/sprint3-contracts.md` 锁定了所有路径 + DTO 字段,3 个 Agent 互不阻塞
+- **分支命名**:`feature/sprint3-{flow|assistant|frontend}` 清晰区分所有权
+- **跨分支污染**:Agent C 的 working dir 被 Agent A/B 切换,需要 `git stash + checkout + stash pop` 恢复
+- **共享配置**:application.yml / AiPlatformApplication 三个 Agent 都改,合并后由 `git merge -no-ff` 保留各自 commit
+- **PowerShell JSON 测试**:用 `InFile` 传 JSON 文件避免中文字符串拼接乱码
 
 ### 12.1 远程仓库(2026-06-08 已推送)
 
