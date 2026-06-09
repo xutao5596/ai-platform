@@ -1,155 +1,372 @@
 package com.aiplatform.ai.vector;
 
+import com.github.jelmerk.hnswlib.core.DistanceFunctions;
+import com.github.jelmerk.hnswlib.core.Item;
+import com.github.jelmerk.hnswlib.core.SearchResult;
+import com.github.jelmerk.hnswlib.core.hnsw.HnswIndex;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
-import java.util.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * 内存向量存储(PoC 简化版):每知识库一个 List<long,float[]>,懒加载。
- * 真实部署可替换为 Hnswlib 1.2.1 / Milvus。
+ * Hnswlib 1.2.1 真实向量库封装(替换原内存 ArrayList PoC)。
  *
- * 持久化:JSON 序列化到 ai.app.hnsw-path 目录
+ * 设计:
+ * - 每知识库一个 HnswIndex 实例(在内存)
+ * - 维度:create-if-absent 锁住,addItem 时若 dim 不一致抛 IllegalArgumentException
+ * - 持久化:VectorIndexPersistence 读/写 ai_vector_index.index_blob BLOB
+ * - 启动时遍历表,逐 kb 加载到内存
+ * - 写盘:每 100 次 addItem 或 5s(@Scheduled)flush dirty 索引
+ * - Hnswlib 参数:M=16, efConstruction=200, efSearch=50(默认),maxItemCount=1_000_000
+ *
+ * 公开 API 与原 PoC 兼容(方法名/参数/返回类型不变,ScoredResult record 同形)。
+ * 新增: addBatch。
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class HnswlibVectorStore {
 
-    private final Map<Long, List<float[]>> vectors = new ConcurrentHashMap<>();
-    private final Map<Long, List<Long>> ids = new ConcurrentHashMap<>();
-    private final Map<Long, Integer> dimensions = new ConcurrentHashMap<>();
-    private final Map<Long, Object> locks = new ConcurrentHashMap<>();
+    private static final int DEFAULT_M = 16;
+    private static final int DEFAULT_EF_CONSTRUCTION = 200;
+    private static final int DEFAULT_EF_SEARCH = 50;
+    private static final int DEFAULT_MAX_ITEM_COUNT = 1_000_000;
+    private static final int FLUSH_THRESHOLD = 100;
+    private static final int FLUSH_INTERVAL_MS = 5_000;
 
-    public void initIndex(Long kbId, int dim) {
-        dimensions.putIfAbsent(kbId, dim);
-        vectors.computeIfAbsent(kbId, k -> Collections.synchronizedList(new ArrayList<>()));
-        ids.computeIfAbsent(kbId, k -> Collections.synchronizedList(new ArrayList<>()));
+    /** 索引内存表(kbId → 索引+dim+dirty 计数)。 */
+    private final Map<Long, IndexEntry> indexes = new ConcurrentHashMap<>();
+
+    private final VectorIndexPersistence persistence;
+
+    @PostConstruct
+    void init() {
+        // 启动时遍历 ai_vector_index,逐 kb 加载到内存
+        List<Long> kbIds;
+        try {
+            kbIds = persistence.listAllKbIds();
+        } catch (Exception e) {
+            log.warn("[HnswlibVectorStore] listAllKbIds 失败,启动加载跳过: {}", e.getMessage());
+            return;
+        }
+        int ok = 0, fail = 0;
+        for (Long kbId : kbIds) {
+            try {
+                loadFromDb(kbId);
+                ok++;
+            } catch (Exception e) {
+                fail++;
+                log.error("[HnswlibVectorStore] 启动加载失败 kb={}", kbId, e);
+            }
+        }
+        log.info("[HnswlibVectorStore] 启动加载完成: total={} ok={} fail={}", kbIds.size(), ok, fail);
     }
 
-    public synchronized void addItem(Long kbId, Long vectorId, float[] vector) {
-        if (kbId == null) return;
-        initIndex(kbId, vector.length);
-        List<Long> idList = ids.get(kbId);
-        List<float[]> vecList = vectors.get(kbId);
-        int existing = idList.indexOf(vectorId);
-        if (existing >= 0) {
-            vecList.set(existing, vector);
+    @PreDestroy
+    void shutdown() {
+        log.info("[HnswlibVectorStore] 关闭,flush 所有 dirty 索引");
+        for (Long kbId : new ArrayList<>(indexes.keySet())) {
+            try {
+                saveToDb(kbId);
+            } catch (Exception e) {
+                log.error("[HnswlibVectorStore] shutdown flush failed kb={}", kbId, e);
+            }
+        }
+    }
+
+    /**
+     * 懒加载/创建 kb 索引。
+     * 已有:校验 dim 一致;DB 已有:从 BLOB 反序列化;否则新建。
+     */
+    public synchronized void initIndex(Long kbId, int dim) {
+        if (kbId == null) throw new IllegalArgumentException("kbId is null");
+        IndexEntry existing = indexes.get(kbId);
+        if (existing != null) {
+            if (existing.dimension != dim) {
+                throw new IllegalArgumentException(
+                        "kb=" + kbId + " 已初始化为 dim=" + existing.dimension + ",新请求 dim=" + dim);
+            }
+            return;
+        }
+        // 尝试从 DB 加载
+        VectorIndexPersistence.IndexMeta meta = persistence.readMeta(kbId);
+        HnswIndex<Long, float[], FloatItem, Float> hnsw;
+        if (meta != null && meta.blob() != null && meta.blob().length > 0) {
+            if (meta.dimension() != dim) {
+                throw new IllegalArgumentException(
+                        "kb=" + kbId + " DB 已存 dim=" + meta.dimension() + ",与请求 dim=" + dim + " 不一致");
+            }
+            hnsw = deserialize(meta.blob());
+            log.info("[HnswlibVectorStore] 从 DB 加载索引 kb={} dim={} count={}",
+                    kbId, meta.dimension(), hnsw.size());
         } else {
-            idList.add(vectorId);
-            vecList.add(vector);
+            hnsw = newIndex(dim);
+            log.info("[HnswlibVectorStore] 新建空索引 kb={} dim={}", kbId, dim);
+        }
+        IndexEntry entry = new IndexEntry(hnsw, dim);
+        indexes.put(kbId, entry);
+    }
+
+    public void addItem(Long kbId, Long vectorId, float[] vector) {
+        if (kbId == null || vectorId == null || vector == null) return;
+        // 第一次 add 也要保证 initIndex(可能 dim 就是 vector.length)
+        if (!indexes.containsKey(kbId)) {
+            initIndex(kbId, vector.length);
+        }
+        IndexEntry entry = indexes.get(kbId);
+        if (entry == null) {
+            throw new IllegalStateException("initIndex 失败 kb=" + kbId);
+        }
+        if (entry.dimension != vector.length) {
+            throw new IllegalArgumentException(
+                    "kb=" + kbId + " dim=" + entry.dimension + " 与 addItem vec.len=" + vector.length + " 不一致");
+        }
+        FloatItem item = new FloatItem(vectorId, vector);
+        entry.index.add(item);
+        int d = entry.dirtyCounter.incrementAndGet();
+        if (d >= FLUSH_THRESHOLD) {
+            try {
+                saveToDb(kbId);
+            } catch (Exception e) {
+                log.warn("[HnswlibVectorStore] 阈值 flush 失败 kb={}: {}", kbId, e.getMessage());
+            }
+        }
+    }
+
+    public void addBatch(Long kbId, List<Long> ids, List<float[]> vectors) {
+        if (kbId == null || ids == null || vectors == null) return;
+        if (ids.size() != vectors.size()) {
+            throw new IllegalArgumentException("ids.size=" + ids.size() + " vectors.size=" + vectors.size());
+        }
+        if (ids.isEmpty()) return;
+        if (!indexes.containsKey(kbId)) {
+            initIndex(kbId, vectors.get(0).length);
+        }
+        IndexEntry entry = indexes.get(kbId);
+        if (entry == null) throw new IllegalStateException("initIndex 失败 kb=" + kbId);
+        for (int i = 0; i < ids.size(); i++) {
+            Long id = ids.get(i);
+            float[] v = vectors.get(i);
+            if (id == null || v == null) continue;
+            if (v.length != entry.dimension) {
+                throw new IllegalArgumentException(
+                        "kb=" + kbId + " dim=" + entry.dimension + " 与 addBatch vec.len=" + v.length + " 不一致(idx=" + i + ")");
+            }
+            entry.index.add(new FloatItem(id, v));
+        }
+        int d = entry.dirtyCounter.addAndGet(ids.size());
+        if (d >= FLUSH_THRESHOLD) {
+            try {
+                saveToDb(kbId);
+            } catch (Exception e) {
+                log.warn("[HnswlibVectorStore] 批量阈值 flush 失败 kb={}: {}", kbId, e.getMessage());
+            }
         }
     }
 
     public List<ScoredResult> search(Long kbId, float[] query, int topK) {
-        List<float[]> vecList = vectors.get(kbId);
-        List<Long> idList = ids.get(kbId);
-        if (vecList == null || idList == null || vecList.isEmpty()) return List.of();
-        // 归一化 query
-        float[] q = normalize(query);
-        List<ScoredResult> scored = new ArrayList<>();
-        synchronized (vecList) {
-            for (int i = 0; i < vecList.size(); i++) {
-                float score = cosine(q, vecList.get(i));
-                scored.add(new ScoredResult(idList.get(i), score));
-            }
+        IndexEntry entry = indexes.get(kbId);
+        if (entry == null || entry.index.size() == 0 || query == null) return List.of();
+        if (query.length != entry.dimension) {
+            throw new IllegalArgumentException(
+                    "kb=" + kbId + " dim=" + entry.dimension + " 与 query.len=" + query.length + " 不一致");
         }
-        return scored.stream()
+        List<SearchResult<FloatItem, Float>> raw = entry.index.findNearest(query, topK);
+        // hnswlib cosine distance: 1 - similarity。score 越大越相关 → 转换: score = 1 - distance
+        return raw.stream()
+                .map(r -> new ScoredResult(r.item().id, 1f - r.distance()))
                 .sorted((a, b) -> Float.compare(b.score, a.score))
-                .limit(topK)
                 .collect(Collectors.toList());
     }
 
     public void removeItem(Long kbId, Long vectorId) {
-        List<Long> idList = ids.get(kbId);
-        List<float[]> vecList = vectors.get(kbId);
-        if (idList == null) return;
-        int idx = idList.indexOf(vectorId);
-        if (idx >= 0) {
-            idList.remove(idx);
-            vecList.remove(idx);
-        }
+        IndexEntry entry = indexes.get(kbId);
+        if (entry == null || vectorId == null) return;
+        // hnswlib remove 需要 version;此处用 Long hashCode 作为单调 version
+        entry.index.remove(vectorId, vectorId.hashCode());
+        entry.dirtyCounter.incrementAndGet();
     }
 
     public int size(Long kbId) {
-        List<Long> idList = ids.get(kbId);
-        return idList == null ? 0 : idList.size();
+        IndexEntry entry = indexes.get(kbId);
+        return entry == null ? 0 : entry.index.size();
     }
 
     public void clear(Long kbId) {
-        vectors.remove(kbId);
-        ids.remove(kbId);
-        dimensions.remove(kbId);
+        IndexEntry entry = indexes.remove(kbId);
+        if (entry != null) {
+            // hnswlib 不支持整体清空;新建一个同 dim 空索引
+            try {
+                HnswIndex<Long, float[], FloatItem, Float> fresh = newIndex(entry.dimension);
+                indexes.put(kbId, new IndexEntry(fresh, entry.dimension));
+            } catch (Exception e) {
+                log.warn("[HnswlibVectorStore] clear 重建索引失败 kb={}: {}", kbId, e.getMessage());
+            }
+            persistence.delete(kbId);
+        }
     }
 
     public void clearAll() {
-        vectors.clear();
-        ids.clear();
-        dimensions.clear();
+        List<Long> all = new ArrayList<>(indexes.keySet());
+        for (Long kbId : all) {
+            clear(kbId);
+        }
     }
 
-    public void save(Long kbId, String basePath) {
+    /**
+     * 序列化索引到 BLOB 并 upsert 到 ai_vector_index。
+     * 触发:
+     *   - addItem/addBatch 计数满 100
+     *   - @Scheduled 5s 周期
+     *   - shutdown
+     */
+    public void saveToDb(Long kbId) {
+        IndexEntry entry = indexes.get(kbId);
+        if (entry == null) return;
+        if (entry.dirtyCounter.get() == 0 && entry.index.size() > 0) {
+            // 无 dirty 但有数据:首次加载后尚未 flush,直接写一次
+        }
         try {
-            File dir = new File(basePath);
-            if (!dir.exists()) dir.mkdirs();
-            File f = new File(dir, "kb_" + kbId + ".vec");
-            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(f))) {
-                oos.writeObject(dimensions.get(kbId));
-                List<Long> idList = ids.get(kbId);
-                List<float[]> vecList = vectors.get(kbId);
-                oos.writeInt(idList == null ? 0 : idList.size());
-                if (idList != null) {
-                    for (int i = 0; i < idList.size(); i++) {
-                        oos.writeLong(idList.get(i));
-                        oos.writeObject(vecList.get(i));
-                    }
+            byte[] blob = serialize(entry.index);
+            int size = entry.index.size();
+            persistence.writeIndexBlob(
+                    kbId,
+                    entry.dimension,
+                    size,
+                    entry.index.getM(),
+                    entry.index.getEfConstruction(),
+                    entry.index.getEf(),
+                    blob);
+            entry.dirtyCounter.set(0);
+            log.debug("[HnswlibVectorStore] saveToDb kb={} size={} bytes={}", kbId, size, blob.length);
+        } catch (Exception e) {
+            log.error("[HnswlibVectorStore] saveToDb failed kb={}", kbId, e);
+            throw new RuntimeException("saveToDb failed kb=" + kbId, e);
+        }
+    }
+
+    /**
+     * 从 ai_vector_index 加载到内存(若已存在则替换)。
+     * 找到但 BLOB 为空:不替换(视为未初始化)。
+     */
+    public void loadFromDb(Long kbId) {
+        VectorIndexPersistence.IndexMeta meta = persistence.readMeta(kbId);
+        if (meta == null) return;
+        if (meta.blob() == null || meta.blob().length == 0) {
+            log.debug("[HnswlibVectorStore] loadFromDb 无 BLOB kb={}", kbId);
+            return;
+        }
+        HnswIndex<Long, float[], FloatItem, Float> hnsw = deserialize(meta.blob());
+        IndexEntry entry = new IndexEntry(hnsw, meta.dimension());
+        indexes.put(kbId, entry);
+        log.info("[HnswlibVectorStore] loadFromDb kb={} dim={} count={}", kbId, meta.dimension(), hnsw.size());
+    }
+
+    /**
+     * 5s 周期 flush 所有 dirty 索引。
+     */
+    @Scheduled(fixedDelay = FLUSH_INTERVAL_MS)
+    public void scheduledFlush() {
+        for (Map.Entry<Long, IndexEntry> e : indexes.entrySet()) {
+            if (e.getValue().dirtyCounter.get() > 0) {
+                try {
+                    saveToDb(e.getKey());
+                } catch (Exception ex) {
+                    log.warn("[HnswlibVectorStore] scheduled flush failed kb={}: {}", e.getKey(), ex.getMessage());
                 }
             }
+        }
+    }
+
+    // -------- helpers --------
+
+    private HnswIndex<Long, float[], FloatItem, Float> newIndex(int dim) {
+        return HnswIndex
+                .newBuilder(dim, DistanceFunctions.FLOAT_COSINE_DISTANCE, DEFAULT_MAX_ITEM_COUNT)
+                .withM(DEFAULT_M)
+                .withEfConstruction(DEFAULT_EF_CONSTRUCTION)
+                .withEf(DEFAULT_EF_SEARCH)
+                .withRemoveEnabled()
+                .build();
+    }
+
+    private static byte[] serialize(HnswIndex<Long, float[], FloatItem, Float> index) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(64 * 1024);
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            index.save(oos);
+        }
+        return baos.toByteArray();
+    }
+
+    private static HnswIndex<Long, float[], FloatItem, Float> deserialize(byte[] blob) {
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(blob))) {
+            return HnswIndex.load(ois);
         } catch (IOException e) {
-            log.error("Failed to save vector store kb={}", kbId, e);
+            throw new RuntimeException("HnswIndex 反序列化失败", e);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public void load(Long kbId, String basePath) {
-        File f = new File(basePath, "kb_" + kbId + ".vec");
-        if (!f.exists()) return;
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f))) {
-            int dim = (Integer) ois.readObject();
-            initIndex(kbId, dim);
-            int n = ois.readInt();
-            List<Long> idList = ids.get(kbId);
-            List<float[]> vecList = vectors.get(kbId);
-            for (int i = 0; i < n; i++) {
-                long id = ois.readLong();
-                float[] v = (float[]) ois.readObject();
-                idList.add(id);
-                vecList.add(v);
-            }
-            log.info("Loaded {} vectors for kb={}", n, kbId);
-        } catch (IOException | ClassNotFoundException e) {
-            log.warn("Failed to load vector store kb={}: {}", kbId, e.getMessage());
+    /**
+     * 内部索引项(Long id + float[] vector)。implements Item + Serializable。
+     */
+    public static final class FloatItem implements Item<Long, float[]>, Serializable {
+        private static final long serialVersionUID = 1L;
+        final Long id;
+        final float[] vector;
+
+        FloatItem(Long id, float[] vector) {
+            this.id = id;
+            this.vector = vector;
+        }
+
+        @Override
+        public Long id() {
+            return id;
+        }
+
+        @Override
+        public float[] vector() {
+            return vector;
+        }
+
+        @Override
+        public int dimensions() {
+            return vector.length;
         }
     }
 
-    private float[] normalize(float[] v) {
-        float n = 0;
-        for (float f : v) n += f * f;
-        n = (float) Math.sqrt(n);
-        if (n == 0) return v;
-        float[] r = new float[v.length];
-        for (int i = 0; i < v.length; i++) r[i] = v[i] / n;
-        return r;
+    /**
+     * 索引条目(在 ConcurrentHashMap 中保存)。
+     */
+    private static final class IndexEntry {
+        final HnswIndex<Long, float[], FloatItem, Float> index;
+        final int dimension;
+        final AtomicInteger dirtyCounter = new AtomicInteger(0);
+
+        IndexEntry(HnswIndex<Long, float[], FloatItem, Float> index, int dimension) {
+            this.index = index;
+            this.dimension = dimension;
+        }
     }
 
-    private float cosine(float[] a, float[] b) {
-        if (a.length != b.length) return 0;
-        float dot = 0;
-        for (int i = 0; i < a.length; i++) dot += a[i] * b[i];
-        return dot;
-    }
-
+    /**
+     * 对外暴露的 record(与原 PoC 兼容)。
+     */
     public record ScoredResult(Long vectorId, float score) {}
 }

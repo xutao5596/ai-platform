@@ -57,6 +57,11 @@
         </dependency>
 
         <dependency>
+            <groupId>com.github.jelmerk</groupId>
+            <artifactId>hnswlib-core</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
