@@ -23,16 +23,20 @@
 
 ### 1.1 当前进度(2026-06-09)
 
-- **Sprint 1 已完成(后端 + 前端)** — 联调通过,待 PR 合并
-- **Day 1(昨日)**:后端 8 模块 + 16 张表 + Flyway + 启动验证 ✅
-- **Day 2(今日)**:
-  - 后端 API curl 验证(login/menu/user/dict 全部 200)✅
-  - 前端脚手架(Vue3 + Vite + TS + Element Plus + Pinia + Router)✅
-  - 200px 左侧栏 + 顶栏 + 用户下拉✅
-  - 14 个页面:登录 + Dashboard + 系统管理 6 页 + 项目管理 3 页 + AI/Monitor/Assistant 占位✅
-  - Vite dev 898ms,所有 .vue 编译干净✅
-- **已推送**:feature/sprint1-backend + feature/sprint1-frontend 到 GitHub(SHA: a47e758 / 75aa22a / 2aad8b3)
-- **待办**:PR 合并到 develop + Sprint 2 启动
+- **Sprint 1 + Sprint 2 全部完成** — 后端 + 前端 + 联调 ✅
+- **Sprint 1**:后端 8 模块 + 16 张表(V1/V2) + JWT + 10 系统表 CRUD + 6 项目表 CRUD + @PreProjectRole + 14 前端页面 (v0.2.0)
+- **Sprint 2**:11 张 AI 表(V3/V4) + LangChain4j 1.9.1 + langchain4j-open-ai + Hnswlib PoC(实际用 in-memory 向量) + Tika 3.2.3 + 模型/知识库/提示词/AI 对话 完整 CRUD + 4 前端页面 (v0.3.0/v0.3.1)
+- **GitHub**:2 个 feature 分支 + 4 commits,已合并到 develop,tag v0.2.0 / v0.3.0 / v0.3.1 已推送
+- **Sprint 1 bug 修复**:
+  - `@PreProjectRole` aspect NPE(拆分 `@annotation` / `@within` 两个 advice)
+  - URI 模板变量解析(Spring `@PathVariable` 编译擦除)
+  - `separator` 是 MariaDB 关键字 → 改名 `sep`
+  - MyBatis Plus `insert-strategy: not_null` 导致 `deleted` 不写 SQL → 默认策略
+- **Sprint 3 启动**:
+  - FlowNode SPI + NodeRegistry + 12 节点 + 5 触发器
+  - 助手(Flow 复用 + assistant_event_sub)
+  - 流程编辑器(LogicFlow)
+  - 详见 `docs/PLAN.md` Week 5-6
 
 ---
 
@@ -346,44 +350,45 @@ Nginx (80/443)
 
 ## 11. 待办与开放问题
 
-### 11.1 Sprint 1 待办(更新于 Day 2 收工)
+### 11.1 Sprint 1 + Sprint 2 完成清单
 
-#### ✅ 已完成(Day 1 + Day 2)
-- [x] 后端 8 个 Maven 模块骨架 + 父 pom
-- [x] ai-common 公共类(Result/Page/Exception/BaseEntity/Context/Constants)
-- [x] ai-framework(JWT/Caffeine/MyBatis-Plus/Web/Log 注解)
-- [x] ai-system 10 张表 CRUD(用户/角色/菜单/部门/字典/日志) + 登录
-- [x] ai-project 6 张表 CRUD + @PreProjectRole 注解
-- [x] ai-flow/ai-ai/ai-assistant 占位类
-- [x] Flyway V1(16 张表)+ V2(种子数据)
-- [x] 后端启动验证 + API curl 验证(login/menu/user/dict 全 200)
-- [x] 前端脚手架(Vue3 + Vite 6 + TS 5.7 + Element Plus 2.9 + Pinia 2.3)
-- [x] 200px 侧边栏 + 顶栏 + 用户下拉 + NProgress
-- [x] 登录页 + Dashboard + 系统管理 6 页面 + 项目 3 页面 + 4 占位页面
-- [x] Vite dev 启动 898ms,169 packages
-- [x] 推送到 GitHub(feature/sprint1-backend + feature/sprint1-frontend)
+#### ✅ Sprint 1(Day 1-2)
+- [x] 后端 8 模块 + 16 张表(V1/V2) + JWT + 系统管理 + 项目域
+- [x] 前端 Vue3 脚手架 + 14 页面
+- [x] v0.2.0 tag
 
-#### ⏳ Sprint 1 收尾
-- [ ] PR 合并到 develop
-- [ ] 在 GitHub 创建 PR
-- [ ] 删除远程 feature 分支(合并后)
-- [ ] 切回 develop 分支,准备 Sprint 2
+#### ✅ Sprint 2(Day 3 2026-06-09)
+- [x] **后端**:11 张 AI 表(V3 7 张 + V4 4 张) + LangChain4j 1.9.1 + langchain4j-open-ai + Tika 3.2.3
+  - 模型 CRUD(全局) + 知识库 CRUD(项目) + 提示词版本管理 + AI 对话 SSE
+  - Hnswlib 1.2.1 API 改造太复杂,Sprint 2 简化为 in-memory 向量(后续替换)
+  - Embedding 简化为 hash-based 确定性向量 PoC(后续接真 embedding API)
+- [x] **前端**:4 页面(模型/知识库/提示词/AI 对话) + 完整 CRUD + 会话管理
+- [x] **bug 修复**:@PreProjectRole NPE、URI 模板变量、separator 关键字、insert-strategy
+- [x] v0.3.0 / v0.3.1 tag
 
-### 11.2 后续 Sprint 待办
+### 11.2 Sprint 3 待办(Week 5-6)
 
-- [ ] **Sprint 2 (Week 3-4)**:AI 业务核心
-  - LangChain4j 多厂商适配(OpenAI/DeepSeek/Claude/通义/智谱/Ollama)
-  - ai_model CRUD + 连接测试
-  - Hnswlib 集成 + Embedding
-  - ai_knowledge + doc + chunk CRUD
-  - Apache Tika 文档解析
-  - ai_prompt CRUD + 版本
-  - AI 对话 SSE 流式
-  - 前端:模型管理/知识库/提示词/AI 对话页(Markdown + 代码高亮)
-- [ ] **Sprint 3 (Week 5-6)**:流程 + 助手
-- [ ] **Sprint 4 (Week 7-8)**:API Key + Webhook + 部署
+- [ ] **流程 SPI**:FlowNode 接口 + NodeRegistry(自动扫描 + 热加载)
+- [ ] **流程引擎**:design → chain 转换器(LogicFlow JSON → LiteFlow XML)
+- [ ] **FlowExecutor**:执行编排 + 步骤记录
+- [ ] **12 节点**:start/end/llm/knowledge_search/prompt/agent/if_else/subflow/http/mcp_tool/script/set_var
+- [ ] **自定义节点**:用户自定义(HTTP/SQL/脚本)+ 开发者扩展(Java SPI)
+- [ ] **5 触发器**:Manual/Cron/Webhook/Event/Chained
+- [ ] **助手**:assistant_config CRUD + assistant_event_sub 事件订阅
+- [ ] **工具集**:10+ 系统工具(HTTP 调子流程、查项目、查知识库…)
+- [ ] **前端**:FlowEditor 三栏布局(LogicFlow 画布) + 节点配置表单 + 调试面板
+- [ ] **API Key** 简化版 + **Webhook** 投递
 
-### 11.3 开放问题
+### 11.3 Sprint 4 待办(Week 7-8)
+
+- [ ] API Key 鉴权拦截器(限流、Sprint 2.2 已移除的 Bucket4j 重新选型)
+- [ ] Webhook 管理 + 投递 + 签名验证 + 重试
+- [ ] 监控(QPS/P95/错误率)
+- [ ] 部署脚本完善(systemd + nginx)
+- [ ] 主题切换(3 色 + 明暗)
+- [ ] 用户手册 + 压测
+
+### 11.4 开放问题
 
 - 暂无重大开放问题
 
@@ -451,7 +456,12 @@ ai-frontend/
     ├── api/
     │   ├── auth.ts       # 登录/登出/refresh/profile/menus/permissions
     │   ├── system/{user,role,menu,dept,dict,log}.ts
-    │   └── project.ts    # 项目 + 成员
+    │   ├── project.ts    # 项目 + 成员
+    │   └── ai/           # Sprint 2 新增
+    │       ├── model.ts  # 模型 CRUD
+    │       ├── knowledge.ts
+    │       ├── prompt.ts # 提示词 + 版本
+    │       └── chat.ts   # AI 对话
     ├── store/modules/
     │   ├── user.ts       # token/refreshToken/userInfo/roles/permissions,localStorage
     │   └── app.ts        # sidebarCollapsed/menus/currentProjectId
@@ -463,7 +473,12 @@ ai-frontend/
         ├── dashboard/index.vue       # 4 统计卡 + 4 步快速开始 + 个人卡片
         ├── system/{user,role,menu,dept,dict,log}.vue  # 完整 CRUD
         ├── project/{list,detail,members}.vue
-        ├── ai/{model,mcp}.vue        # Sprint 2 占位
+        ├── ai/
+        │   ├── model.vue             # Sprint 2:模型管理
+        │   ├── knowledge.vue         # Sprint 2:知识库
+        │   ├── prompt.vue            # Sprint 2:提示词 + 版本
+        │   ├── chat.vue              # Sprint 2:AI 对话
+        │   └── mcp.vue               # Sprint 3
         ├── monitor/index.vue         # Sprint 4 占位
         └── assistant/index.vue       # Sprint 3 占位
 ```
@@ -473,6 +488,44 @@ ai-frontend/
 - HTTP:统一在 `utils/http.ts` 拦截,业务代码只关心 data
 - 类型:每个 API 文件导出 VO/Save 类型,View 层强类型
 - 主题色:3 套(蓝/紫/绿)走 CSS 变量 `--ai-primary`,Sprint 4 加切换器
+
+### 14.7 Sprint 2 关键技术细节(2026-06-09)
+
+#### 14.7.1 LangChain4j 集成
+- **artifact**:`dev.langchain4j:langchain4j-core` + `langchain4j-open-ai`(1.9.1)
+- **统一客户端**:`OpenAiChatModel` / `OpenAiStreamingChatModel`(OpenAI 兼容协议)
+- **LlmProviderFactory**:每个 modelId 缓存 ChatModel + StreamingChatModel 实例
+- **厂商适配**:`provider` 字段(openai/deepseek/qwen/glm/ollama) → 映射默认 baseUrl
+  - openai: https://api.openai.com/v1
+  - deepseek: https://api.deepseek.com/v1
+  - qwen: https://dashscope.aliyuncs.com/compatible-mode/v1
+  - glm: https://open.bigmodel.cn/api/paas/v4
+  - ollama: http://localhost:11434/v1
+- **配置项**:apiBase、apiKey、maxTokens、temperature、embeddingModel、dimension
+
+#### 14.7.2 简化版向量库(PoC)
+- **真实生产**:Hnswlib 1.2.1(API 改造复杂,Sprint 2.1 升级)
+- **当前**:`HnswlibVectorStore` 内存 Map + 余弦相似度,支持序列化为 `.vec` 文件
+- **Embedding**:`EmbeddingService` hash-based 确定性向量(Sprint 2.1 替换为真 API)
+
+#### 14.7.3 AI 对话 SSE 流式(PoC)
+- **路径**:`/api/v1/ai/chat/stream` (produces=text/event-stream)
+- **PoC 版**:同步 chat 完后,按 8 字符分块 + 30ms 间隔发送,模拟流式
+- **生产版**:改用 `OpenAiStreamingChatModel.tokenStream()` + SSE event
+
+#### 14.7.4 关键 bug 修复
+- **Bug 1**:`@PreProjectRole` aspect 抛 NPE
+  - 原因:`@annotation(ppr) || @within(ppr)` 合并,`ppr` 在 `@within` 触发时为 null
+  - 修复:拆分为两个 `@Around`,`doCheck` 内 null-safe
+- **Bug 2**:`projectId` 解析失败
+  - 原因:Java 21 + SB 3 默认不保留编译期参数名,`@PathVariable` 无显式 value 时取不到
+  - 修复:aspect 优先从 `HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE` 取
+- **Bug 3**:`separator` 字段 SQL syntax error
+  - 原因:MariaDB 保留字
+  - 修复:列名 `sep` + 移除 DEFAULT '\n\n'(Flyway 转义问题)
+- **Bug 4**:`insert-strategy: not_null` 导致 unique 索引冲突
+  - 原因:deleted 字段不写入 SQL,unique (provider, model_name, deleted) 区分不开
+  - 修复:删除全局配置,使用 MyBatis Plus 默认(全部字段写入)
 
 ### 12.1 远程仓库(2026-06-08 已推送)
 
