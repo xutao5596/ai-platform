@@ -71,13 +71,16 @@ public class PreProjectRoleAspect {
                 }
             }
         }
-        // 3. 回退:参数对象字段
-        if (args.length == 1 && args[0] != null) {
+        // 3. 回退:参数对象字段(直接 projectId 字段)
+        if (args.length >= 1 && args[0] != null) {
             try {
                 var f = args[0].getClass().getDeclaredField("projectId");
                 f.setAccessible(true);
-                return toLong(f.get(args[0]));
-            } catch (Exception ignored) {
+                Long v = toLong(f.get(args[0]));
+                if (v != null) return v;
+            } catch (NoSuchFieldException ignored) {
+            } catch (Exception e) {
+                log.debug("Failed to read projectId field: {}", e.getMessage());
             }
         }
         throw new BusinessException(ErrorCode.BAD_REQUEST, "无法解析项目 id");
