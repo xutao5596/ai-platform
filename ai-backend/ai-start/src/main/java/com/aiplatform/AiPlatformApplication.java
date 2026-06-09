@@ -10,7 +10,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 @MapperScan(basePackages = {
         "com.aiplatform.system.mapper",
-        "com.aiplatform.project.mapper"
+        "com.aiplatform.project.mapper",
+        "com.aiplatform.ai.mapper"
 })
 @SpringBootApplication(scanBasePackages = "com.aiplatform")
 public class AiPlatformApplication {

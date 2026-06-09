@@ -35,6 +35,8 @@ public class GlobalExceptionHandler {
         String msg = ex.getBindingResult().getFieldErrors().stream()
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .collect(Collectors.joining("; "));
+        if (msg.isEmpty()) msg = ex.getMessage();
+        log.warn("Validation failed: {}", msg);
         return Result.fail(HttpStatus.BAD_REQUEST.value(), msg);
     }
 
