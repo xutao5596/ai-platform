@@ -35,25 +35,24 @@ public class WebhookTrigger implements FlowTrigger {
     }
 
     /**
-     * 通过 token 找到 flow:token = "wh_" + triggerId 随机串(简单实现)。
-     * 这里为了简化,使用 trigger id 的 base36 编码作为 token。
+     * 通过 token 找到 flow:token 是 ai_flow_trigger.config.token 字段
      */
     public Long resolveToken(String token) {
         if (token == null || token.isBlank()) return null;
-        try {
-            // 简化:token 是 trigger id(字符串)
-            Long triggerId = Long.parseLong(token);
-            AiFlowTrigger t = triggerMapper.selectById(triggerId);
-            if (t == null || !"webhook".equals(t.getType())) return null;
-            if (t.getStatus() == null || t.getStatus() != 1) return null;
-            return t.getFlowId();
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        AiFlowTrigger t = triggerMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiFlowTrigger>()
+                        .like(AiFlowTrigger::getConfig, "\"" + token + "\"")
+                        .eq(AiFlowTrigger::getType, "webhook")
+                        .eq(AiFlowTrigger::getStatus, 1)
+                        .last("LIMIT 1"));
+        if (t == null) return null;
+        return t.getFlowId();
     }
 
-    /** 为新创建的 webhook 触发器生成 token。 */
-    public static String generateToken(Long triggerId) {
-        return String.valueOf(triggerId);
+    /**
+     * 为新创建�?webhook 触发器生�?token
+     */
+    public static String generateToken() {
+        return "wh_" + java.util.UUID.randomUUID().toString().replace("-", "");
     }
 }

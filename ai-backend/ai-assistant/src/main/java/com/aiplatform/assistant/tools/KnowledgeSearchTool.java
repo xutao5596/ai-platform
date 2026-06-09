@@ -89,7 +89,12 @@ public class KnowledgeSearchTool implements AssistantTool {
             } else {
                 kbs = knowledgeMapper.selectList(null);
             }
-            if (kbs.isEmpty()) return ToolResult.ok("未找到可用知识库");
+            if (kbs.isEmpty()) {
+                if (kbIdsStr != null && !kbIdsStr.isBlank()) {
+                    return ToolResult.fail("指定的 kbIds 不存在: " + kbIdsStr);
+                }
+                return ToolResult.ok("未找到可用知识库");
+            }
 
             int dim = 256; // PoC 维度,统一 hash-based
             float[] qv = embeddingService.embed(query, dim);

@@ -30,30 +30,19 @@ public class WebhookController {
     private final AiFlowTriggerMapper triggerMapper;
     private final AiFlowMapper flowMapper;
     private final TriggerRegistry triggerRegistry;
+    private final com.aiplatform.flow.trigger.WebhookTrigger webhookTrigger;
 
     @PostMapping("/{token}")
     public Result<Map<String, Object>> receive(@PathVariable String token, @RequestBody(required = false) Map<String, Object> body) {
-        Long triggerId;
-        try {
-            triggerId = Long.parseLong(token);
-        } catch (NumberFormatException e) {
+        Long flowId = webhookTrigger.resolveToken(token);
+        if (flowId == null) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "无效的 webhook token");
         }
-        AiFlowTrigger t = triggerMapper.selectById(triggerId);
-        if (t == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "webhook 不存在");
-        }
-        if (!"webhook".equals(t.getType())) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "该 trigger 不是 webhook 类型");
-        }
-        if (t.getStatus() == null || t.getStatus() != 1) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "webhook 已禁用");
-        }
-        AiFlow f = flowMapper.selectById(t.getFlowId());
+        AiFlow f = flowMapper.selectById(flowId);
         if (f == null) {
             throw new BusinessException(ErrorCode.FLOW_NOT_FOUND);
         }
-        // 同步执行(便于 webhook 客户端等待结果)
+        // 同步执行(便于 webhook 客户端等待结�?
         AiFlowRun run = triggerRegistry.executeSync(f.getId(), body == null ? new HashMap<>() : body, "webhook");
         Map<String, Object> resp = new HashMap<>();
         resp.put("runId", run.getId());

@@ -11,11 +11,14 @@ import com.aiplatform.common.exception.ErrorCode;
 import com.aiplatform.project.annotation.PreProjectRole;
 import com.aiplatform.project.security.ProjectRoleChecker;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/flow/{id}/triggers")
@@ -46,7 +49,22 @@ public class FlowTriggerController {
         t.setFlowId(id);
         t.setProjectId(req.getProjectId());
         t.setType(req.getType());
-        t.setConfig(req.getConfig());
+        // webhook 触发器自动注入 token(以 triggerId 为 token)
+        if ("webhook".equals(req.getType())) {
+            String cfg = req.getConfig() == null || req.getConfig().isBlank() ? "{}" : req.getConfig();
+            try {
+                ObjectMapper m = new ObjectMapper();
+                Map<String, Object> map = m.readValue(cfg, Map.class);
+                if (!map.containsKey("token")) {
+                    map.put("token", WebhookTrigger.generateToken());
+                }
+                t.setConfig(m.writeValueAsString(map));
+            } catch (Exception e) {
+                t.setConfig(cfg);
+            }
+        } else {
+            t.setConfig(req.getConfig());
+        }
         t.setStatus(req.getStatus() == null ? 1 : req.getStatus());
         triggerMapper.insert(t);
         // 如果是 cron,注册调度

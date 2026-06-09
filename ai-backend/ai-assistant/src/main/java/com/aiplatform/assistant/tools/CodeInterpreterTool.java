@@ -46,15 +46,15 @@ public class CodeInterpreterTool implements AssistantTool {
         String code = (String) args.get("code");
         if (code == null || code.isBlank()) return ToolResult.fail("code 不能为空");
         try {
-            ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
-            if (engine == null) return ToolResult.fail("当前 JDK 不支持 JavaScript 引擎");
-            Object result = engine.eval(code);
+            // Java 21 已弃用 Nashorn 引擎,改用 SpEL 求值
+            org.springframework.expression.ExpressionParser parser = new org.springframework.expression.spel.standard.SpelExpressionParser();
+            org.springframework.expression.EvaluationContext ec = new org.springframework.expression.spel.support.StandardEvaluationContext();
+            // 注册常用数学函数
+            ec.setVariable("Math", Math.class);
+            Object result = parser.parseExpression(code).getValue(ec);
             return ToolResult.ok(String.valueOf(result));
-        } catch (ScriptException e) {
-            log.warn("CodeInterpreterTool error: code={}", code, e);
-            return ToolResult.fail("执行失败: " + e.getMessage());
         } catch (Exception e) {
-            log.warn("CodeInterpreterTool unexpected error", e);
+            log.warn("CodeInterpreterTool error: code={}", code, e);
             return ToolResult.fail("执行失败: " + e.getMessage());
         }
     }

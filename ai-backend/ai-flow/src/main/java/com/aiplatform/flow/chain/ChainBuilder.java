@@ -62,8 +62,8 @@ public class ChainBuilder {
             }
             for (JsonNode e : edgesJson) {
                 edges.add(new ChainEdge(
-                        e.path("sourceNodeId").asText(),
-                        e.path("targetNodeId").asText()
+                        firstNonEmpty(e, "sourceNodeId", "source"),
+                        firstNonEmpty(e, "targetNodeId", "target")
                 ));
             }
             // EL:简单串联
@@ -132,14 +132,18 @@ public class ChainBuilder {
             for (JsonNode n : nodesJson) {
                 String id = n.path("id").asText();
                 String typeKey = n.path("type").asText();
-                JsonNode props = n.path("properties").path("config");
-                Map<String, Object> config = mapper.convertValue(props, Map.class);
+                // 兼容:LogicFlow properties.config 与简化 data
+                JsonNode cfg = n.path("properties").path("config");
+                if (cfg.isMissingNode() || cfg.isNull()) {
+                    cfg = n.path("data");
+                }
+                Map<String, Object> config = mapper.convertValue(cfg, Map.class);
                 specs.put(id, new NodeSpec(id, typeKey, config == null ? new HashMap<>() : config));
             }
             // 出边
             for (JsonNode e : edgesJson) {
-                String src = e.path("sourceNodeId").asText();
-                String tgt = e.path("targetNodeId").asText();
+                String src = firstNonEmpty(e, "sourceNodeId", "source");
+                String tgt = firstNonEmpty(e, "targetNodeId", "target");
                 NodeSpec s = specs.get(src);
                 if (s != null) s.next.add(tgt);
             }
@@ -148,6 +152,14 @@ public class ChainBuilder {
             log.warn("buildSpecs 失败: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    private static String firstNonEmpty(JsonNode obj, String... names) {
+        for (String n : names) {
+            JsonNode v = obj.path(n);
+            if (!v.isMissingNode() && !v.isNull() && !v.asText().isEmpty()) return v.asText();
+        }
+        return "";
     }
 
     public static class NodeSpec {
