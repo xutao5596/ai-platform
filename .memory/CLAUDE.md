@@ -2,7 +2,7 @@
 
 > **目的**：本文件是 AI-Platform 项目的核心记忆库,用于在上下文压缩或新会话开始时恢复项目状态。
 > **维护原则**：每次重大决策后必须更新本文件。
-> **最后更新**: 2026-06-08
+> **最后更新**: 2026-06-08(Sprint 1 启动首日)
 
 ---
 
@@ -20,6 +20,19 @@
 ## 1. 项目一句话定位
 
 **AI-Platform** 是一个 **以"项目 (Project)"为顶层容器的 AI 流程自动化编排平台**,项目内可创建多个 AI 助手(复用 Flow 机制)和业务流程;通过拖拽式可视化编辑器构建 AI 流程;支持 5 种触发器;提供多成员协作 4 级权限;部署仅需 JDK + MariaDB + Nginx。
+
+### 1.1 当前进度(2026-06-09)
+
+- **Sprint 1 已完成(后端 + 前端)** — 联调通过,待 PR 合并
+- **Day 1(昨日)**:后端 8 模块 + 16 张表 + Flyway + 启动验证 ✅
+- **Day 2(今日)**:
+  - 后端 API curl 验证(login/menu/user/dict 全部 200)✅
+  - 前端脚手架(Vue3 + Vite + TS + Element Plus + Pinia + Router)✅
+  - 200px 左侧栏 + 顶栏 + 用户下拉✅
+  - 14 个页面:登录 + Dashboard + 系统管理 6 页 + 项目管理 3 页 + AI/Monitor/Assistant 占位✅
+  - Vite dev 898ms,所有 .vue 编译干净✅
+- **已推送**:feature/sprint1-backend + feature/sprint1-frontend 到 GitHub(SHA: a47e758 / 75aa22a / 2aad8b3)
+- **待办**:PR 合并到 develop + Sprint 2 启动
 
 ---
 
@@ -50,6 +63,7 @@
 | 团队规模 | **6 人** | 吸收增加的工作量 |
 | 工期 | **8 周** | 不变 |
 | UI 导航 | **左侧栏 200px** | 用户最新决定(2026-06-08) |
+| **鉴权方案**(2026-06-08 新增) | **自研 JWT + AOP,弃用 Shiro** | Shiro 2.0.2 仍用 javax.servlet,与 Spring Boot 3 / Jakarta 不兼容 |
 
 ### 2.3 不引入的依赖
 
@@ -65,19 +79,21 @@
 
 ### 3.1 后端
 
-| 类别 | 选型 | 版本 |
-|---|---|---|
-| 语言 | Java | 21 LTS |
-| 框架 | Spring Boot | 3.5.5 |
-| 持久层 | MyBatis Plus | 3.5.9 |
-| 数据库 | MariaDB | 12.2 |
-| 缓存 | Caffeine | 3.1.8 |
-| 向量库 | Hnswlib (jelmerk) | 0.7.1 |
-| 权限 | Apache Shiro + JWT | 2.0.2 |
-| AI | LangChain4j | 1.9.1 |
-| 流程 | LiteFlow | 2.15.0 |
-| 文档 | Apache Tika | 3.2.3 |
-| 限流 | Bucket4j | 8.10.x |
+| 类别 | 选型 | 版本 | 备注 |
+|---|---|---|---|
+| 语言 | Java | 21 LTS | ✅ |
+| 框架 | Spring Boot | 3.5.5 | ✅ |
+| 持久层 | MyBatis Plus | 3.5.9 | ✅ |
+| 数据库 | MariaDB | 12.2 | ✅ root/root,db=ai_platform |
+| 缓存 | Caffeine | 3.1.8 | ✅ |
+| 向量库 | Hnswlib (jelmerk) | **1.2.1** | 修正(原 0.7.1 不存在) |
+| 权限 | **自研 JWT + AOP** | - | ❌ 弃用 Shiro 2.0.2(强依赖 javax.servlet,无法在 SB3 用) |
+| AI | LangChain4j | 1.9.1 | ⏳ Sprint 2 引入 |
+| 流程 | LiteFlow | 2.15.0 | ✅ starter 已配置 |
+| 文档 | Apache Tika | 3.2.3 | ⏳ Sprint 2 引入 |
+| 限流 | Bucket4j | 8.10.1 | ❌ 暂时移除(Maven Central 无此 artifact,待 Sprint 4 再选型) |
+| JWT | jjwt | 0.12.6 | ✅ |
+| API 文档 | Knife4j 3 + springdoc | 4.5.0 / 2.6.0 | ✅ |
 
 ### 3.2 前端
 
@@ -322,26 +338,141 @@ Nginx (80/443)
 | 2026-06-08 | 流程节点可自定义 | 用户要求 |
 | 2026-06-08 | 增加 AI 助手 | 核心能力 |
 | 2026-06-08 | 项目为 Workspace | 用户指定 |
+| **2026-06-08**(Sprint 1 Day 1) | **弃用 Shiro,改自研 JWT + AOP** | Shiro 2.0.2 仍依赖 javax.servlet,与 Spring Boot 3 不兼容 |
+| 2026-06-08 | Hnswlib 版本 0.7.1 → 1.2.1 | 0.7.1 不存在 |
+| 2026-06-08 | Bucket4j 暂移除 | Maven Central 无 bucket4j_jdk17-core 8.10.1,需 Sprint 4 重新选型 |
 
 ---
 
 ## 11. 待办与开放问题
 
-### 11.1 待办
+### 11.1 Sprint 1 待办(更新于 Day 2 收工)
 
-- [ ] Hnswlib 集成 PoC (Sprint 0)
-- [ ] LangChain4j 多厂商适配
-- [ ] 12 个节点的具体配置表单设计
-- [ ] 系统工具集(助手调用)的最终清单
-- [ ] 部署环境检查(目标 Linux 服务器)
+#### ✅ 已完成(Day 1 + Day 2)
+- [x] 后端 8 个 Maven 模块骨架 + 父 pom
+- [x] ai-common 公共类(Result/Page/Exception/BaseEntity/Context/Constants)
+- [x] ai-framework(JWT/Caffeine/MyBatis-Plus/Web/Log 注解)
+- [x] ai-system 10 张表 CRUD(用户/角色/菜单/部门/字典/日志) + 登录
+- [x] ai-project 6 张表 CRUD + @PreProjectRole 注解
+- [x] ai-flow/ai-ai/ai-assistant 占位类
+- [x] Flyway V1(16 张表)+ V2(种子数据)
+- [x] 后端启动验证 + API curl 验证(login/menu/user/dict 全 200)
+- [x] 前端脚手架(Vue3 + Vite 6 + TS 5.7 + Element Plus 2.9 + Pinia 2.3)
+- [x] 200px 侧边栏 + 顶栏 + 用户下拉 + NProgress
+- [x] 登录页 + Dashboard + 系统管理 6 页面 + 项目 3 页面 + 4 占位页面
+- [x] Vite dev 启动 898ms,169 packages
+- [x] 推送到 GitHub(feature/sprint1-backend + feature/sprint1-frontend)
 
-### 11.2 开放问题
+#### ⏳ Sprint 1 收尾
+- [ ] PR 合并到 develop
+- [ ] 在 GitHub 创建 PR
+- [ ] 删除远程 feature 分支(合并后)
+- [ ] 切回 develop 分支,准备 Sprint 2
 
-- 暂无重大开放问题,主要决策已敲定
+### 11.2 后续 Sprint 待办
+
+- [ ] **Sprint 2 (Week 3-4)**:AI 业务核心
+  - LangChain4j 多厂商适配(OpenAI/DeepSeek/Claude/通义/智谱/Ollama)
+  - ai_model CRUD + 连接测试
+  - Hnswlib 集成 + Embedding
+  - ai_knowledge + doc + chunk CRUD
+  - Apache Tika 文档解析
+  - ai_prompt CRUD + 版本
+  - AI 对话 SSE 流式
+  - 前端:模型管理/知识库/提示词/AI 对话页(Markdown + 代码高亮)
+- [ ] **Sprint 3 (Week 5-6)**:流程 + 助手
+- [ ] **Sprint 4 (Week 7-8)**:API Key + Webhook + 部署
+
+### 11.3 开放问题
+
+- 暂无重大开放问题
 
 ---
 
-## 12. CI/CD 与版本控制(2026-06-08 已搭建)
+## 14. Sprint 1 关键技术细节(2026-06-08 实施笔记)
+
+### 14.1 Maven 多模块
+- 父 pom:`ai-platform` (packaging=pom),继承 spring-boot-starter-parent 3.5.5
+- 子模块:ai-common / ai-framework / ai-system / ai-project / ai-flow / ai-ai / ai-assistant / ai-start
+- ai-start 引入所有子模块,作为可执行 jar 入口
+- Lombok 注解处理器在父 pom 的 `<build><plugins>` 显式声明(不放在 pluginManagement)
+- mybatis-plus 分页拦截器在 ai-framework 集中配置,所有模块共用
+
+### 14.2 鉴权方案(Shiro 弃用后的自研实现)
+- **JWT 签发/解析**:`ai-framework/jwt/JwtTokenProvider`(基于 jjwt 0.12.6)
+- **JWT 过滤器**:`ai-framework/security/JwtAuthenticationFilter`(extends Spring `OncePerRequestFilter`)
+  - 跳过路径:login/refresh/captcha/webhook/public/druid/swagger/actuator/error/favicon/static
+  - 失败时直接写 401 JSON,不进入 controller
+- **授权 AOP**:`ai-framework/security/AuthorizationAspect`
+  - 拦截 `@RequiresRoles` 和 `@RequiresPermissions` 注解
+  - 从 `UserContext` 取当前用户;`admin=true` 直接放行
+- **项目级 AOP**:`ai-project/security/PreProjectRoleAspect`
+  - 拦截 `@PreProjectRole("admin")` 等注解
+  - 自动从 `@PathVariable Long projectId` 解析项目 ID
+  - 4 级:owner(4) > admin(3) > developer(2) > viewer(1)
+- **当前用户上下文**:`com.aiplatform.common.context.UserContext`(基于 ThreadLocal)
+
+### 14.3 Flyway
+- 位置:`ai-start/src/main/resources/db/migration/`
+- 文件:`V1__init_schema.sql`(16 张表)、`V2__seed_data.sql`(admin 用户、6 菜单、7 字典)
+- 配置:`spring.flyway.locations=classpath:db/migration`、`baseline-on-migrate=true`、`create-schemas=true`
+- 启动会自动执行
+
+### 14.4 启动方式
+```bash
+# 本地启动
+java -jar ai-backend/ai-start/target/ai-start-1.0.0.jar --spring.profiles.active=dev
+
+# 验证登录
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+```
+
+### 14.5 已知问题与对策
+- `WSREP_ON` 警告:启动时 MariaDB 12.2 新增的系统变量 Flyway 不识别,不影响功能
+- Hnswlib 1.2.1 是新版本,与原 0.7.1 API 有差异,Sprint 2 集成时需注意
+- Flyway 推荐升级到支持 MariaDB 12.x 的版本(目前用 9.x,Sprint 4 前可升级)
+
+### 14.6 前端架构(2026-06-09 完成)
+
+```
+ai-frontend/
+├── package.json          # Vue 3.5 / Vite 6 / TS 5.7 / Element Plus 2.9 / Pinia 2.3
+├── vite.config.ts        # 端口 5173,/api 代理 → localhost:8080
+├── tsconfig.json         # paths @/* → ./src/*
+├── index.html
+├── .env.development      # VITE_API_BASE=http://localhost:8080
+├── .env.production       # VITE_API_BASE= (用 nginx 代理)
+└── src/
+    ├── main.ts           # 入口:Vue + Pinia + persistedstate + ElementPlus(zh-cn) + 图标
+    ├── App.vue
+    ├── styles/index.scss # CSS 变量(主题色/侧边栏宽度/字体)
+    ├── api/
+    │   ├── auth.ts       # 登录/登出/refresh/profile/menus/permissions
+    │   ├── system/{user,role,menu,dept,dict,log}.ts
+    │   └── project.ts    # 项目 + 成员
+    ├── store/modules/
+    │   ├── user.ts       # token/refreshToken/userInfo/roles/permissions,localStorage
+    │   └── app.ts        # sidebarCollapsed/menus/currentProjectId
+    ├── router/index.ts   # createWebHistory + 路由守卫(未登录 → /login) + NProgress
+    ├── utils/http.ts     # axios + JWT 注入 + 401 自动登出 + 统一错误提示
+    ├── layouts/index.vue # 200px 侧边栏(可折叠 64px)+ 顶栏(breadcrumb + 用户下拉)
+    └── views/
+        ├── login/index.vue           # 渐变背景 + admin/admin123 提示
+        ├── dashboard/index.vue       # 4 统计卡 + 4 步快速开始 + 个人卡片
+        ├── system/{user,role,menu,dept,dict,log}.vue  # 完整 CRUD
+        ├── project/{list,detail,members}.vue
+        ├── ai/{model,mcp}.vue        # Sprint 2 占位
+        ├── monitor/index.vue         # Sprint 4 占位
+        └── assistant/index.vue       # Sprint 3 占位
+```
+
+**关键约定**:
+- 权限控制:`userStore.hasPermission("system:user:add")`,无权限按钮自动隐藏
+- HTTP:统一在 `utils/http.ts` 拦截,业务代码只关心 data
+- 类型:每个 API 文件导出 VO/Save 类型,View 层强类型
+- 主题色:3 套(蓝/紫/绿)走 CSS 变量 `--ai-primary`,Sprint 4 加切换器
 
 ### 12.1 远程仓库(2026-06-08 已推送)
 

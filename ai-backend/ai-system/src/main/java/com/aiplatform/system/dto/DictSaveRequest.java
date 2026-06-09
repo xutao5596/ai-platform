@@ -1,0 +1,22 @@
+package com.aiplatform.system.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+
+@Data
+public class DictSaveRequest implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    private Long id;
+    @NotBlank(message = "字典类型编码不能为空")
+    private String typeCode;
+    @NotBlank(message = "字典类型名称不能为空")
+    private String typeName;
+    private String description;
+    private Integer status;
+}
