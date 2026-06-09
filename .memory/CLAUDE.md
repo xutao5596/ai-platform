@@ -21,13 +21,18 @@
 
 **AI-Platform** 是一个 **以"项目 (Project)"为顶层容器的 AI 流程自动化编排平台**,项目内可创建多个 AI 助手(复用 Flow 机制)和业务流程;通过拖拽式可视化编辑器构建 AI 流程;支持 5 种触发器;提供多成员协作 4 级权限;部署仅需 JDK + MariaDB + Nginx。
 
-### 1.1 当前进度(2026-06-08)
+### 1.1 当前进度(2026-06-09)
 
-- **Sprint 1** 已启动并完成 **后端基础 + 系统管理 + 项目域**(Day 1 收工)
-- **后端可执行 jar 已打包**(117MB),启动 16s,Flyway 已迁移到 v2
-- **未验证**:API 端到端调用(明天先 curl 跑通 login → list)
-- **明日待办**:前端脚手架 + 联调 + 端到端测试
-- 当前分支:`feature/sprint1-backend`(已 commit a47e758,未 push)
+- **Sprint 1 已完成(后端 + 前端)** — 联调通过,待 PR 合并
+- **Day 1(昨日)**:后端 8 模块 + 16 张表 + Flyway + 启动验证 ✅
+- **Day 2(今日)**:
+  - 后端 API curl 验证(login/menu/user/dict 全部 200)✅
+  - 前端脚手架(Vue3 + Vite + TS + Element Plus + Pinia + Router)✅
+  - 200px 左侧栏 + 顶栏 + 用户下拉✅
+  - 14 个页面:登录 + Dashboard + 系统管理 6 页 + 项目管理 3 页 + AI/Monitor/Assistant 占位✅
+  - Vite dev 898ms,所有 .vue 编译干净✅
+- **已推送**:feature/sprint1-backend + feature/sprint1-frontend 到 GitHub(SHA: a47e758 / 75aa22a / 2aad8b3)
+- **待办**:PR 合并到 develop + Sprint 2 启动
 
 ---
 
@@ -341,9 +346,9 @@ Nginx (80/443)
 
 ## 11. 待办与开放问题
 
-### 11.1 Sprint 1 待办(更新于 Day 1 收工)
+### 11.1 Sprint 1 待办(更新于 Day 2 收工)
 
-#### ✅ 已完成(Day 1)
+#### ✅ 已完成(Day 1 + Day 2)
 - [x] 后端 8 个 Maven 模块骨架 + 父 pom
 - [x] ai-common 公共类(Result/Page/Exception/BaseEntity/Context/Constants)
 - [x] ai-framework(JWT/Caffeine/MyBatis-Plus/Web/Log 注解)
@@ -351,25 +356,32 @@ Nginx (80/443)
 - [x] ai-project 6 张表 CRUD + @PreProjectRole 注解
 - [x] ai-flow/ai-ai/ai-assistant 占位类
 - [x] Flyway V1(16 张表)+ V2(种子数据)
-- [x] 后端启动验证(Flyway v2,Tomcat:8080)
+- [x] 后端启动验证 + API curl 验证(login/menu/user/dict 全 200)
+- [x] 前端脚手架(Vue3 + Vite 6 + TS 5.7 + Element Plus 2.9 + Pinia 2.3)
+- [x] 200px 侧边栏 + 顶栏 + 用户下拉 + NProgress
+- [x] 登录页 + Dashboard + 系统管理 6 页面 + 项目 3 页面 + 4 占位页面
+- [x] Vite dev 启动 898ms,169 packages
+- [x] 推送到 GitHub(feature/sprint1-backend + feature/sprint1-frontend)
 
-#### ⏳ Day 2 待办
-- [ ] curl 验证 login 接口,获取 JWT
-- [ ] 验证 /api/v1/system/menu/tree(用 JWT 调)
-- [ ] 前端脚手架(Vue3 + Vite + TS + Element Plus + Pinia + Vue Router)
-- [ ] 前端布局:200px 侧边栏 + 顶栏 + 主题切换
-- [ ] 前端登录页 + 工作台 + 系统管理 6 个页面 + 项目列表/详情
-- [ ] 前后端联调
-- [ ] commit + push(分支 feature/sprint1-frontend)
+#### ⏳ Sprint 1 收尾
+- [ ] PR 合并到 develop
+- [ ] 在 GitHub 创建 PR
+- [ ] 删除远程 feature 分支(合并后)
+- [ ] 切回 develop 分支,准备 Sprint 2
 
 ### 11.2 后续 Sprint 待办
 
-- [ ] Hnswlib 集成 PoC (Sprint 0/2)
-- [ ] LangChain4j 多厂商适配(Sprint 2)
-- [ ] 12 个节点的具体配置表单设计(Sprint 3)
-- [ ] 系统工具集(助手调用)的最终清单(Sprint 3)
-- [ ] 部署环境检查(目标 Linux 服务器,Sprint 4)
-- [ ] Bucket4j 重新选型(Sprint 4,限流)
+- [ ] **Sprint 2 (Week 3-4)**:AI 业务核心
+  - LangChain4j 多厂商适配(OpenAI/DeepSeek/Claude/通义/智谱/Ollama)
+  - ai_model CRUD + 连接测试
+  - Hnswlib 集成 + Embedding
+  - ai_knowledge + doc + chunk CRUD
+  - Apache Tika 文档解析
+  - ai_prompt CRUD + 版本
+  - AI 对话 SSE 流式
+  - 前端:模型管理/知识库/提示词/AI 对话页(Markdown + 代码高亮)
+- [ ] **Sprint 3 (Week 5-6)**:流程 + 助手
+- [ ] **Sprint 4 (Week 7-8)**:API Key + Webhook + 部署
 
 ### 11.3 开放问题
 
@@ -421,6 +433,46 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - `WSREP_ON` 警告:启动时 MariaDB 12.2 新增的系统变量 Flyway 不识别,不影响功能
 - Hnswlib 1.2.1 是新版本,与原 0.7.1 API 有差异,Sprint 2 集成时需注意
 - Flyway 推荐升级到支持 MariaDB 12.x 的版本(目前用 9.x,Sprint 4 前可升级)
+
+### 14.6 前端架构(2026-06-09 完成)
+
+```
+ai-frontend/
+├── package.json          # Vue 3.5 / Vite 6 / TS 5.7 / Element Plus 2.9 / Pinia 2.3
+├── vite.config.ts        # 端口 5173,/api 代理 → localhost:8080
+├── tsconfig.json         # paths @/* → ./src/*
+├── index.html
+├── .env.development      # VITE_API_BASE=http://localhost:8080
+├── .env.production       # VITE_API_BASE= (用 nginx 代理)
+└── src/
+    ├── main.ts           # 入口:Vue + Pinia + persistedstate + ElementPlus(zh-cn) + 图标
+    ├── App.vue
+    ├── styles/index.scss # CSS 变量(主题色/侧边栏宽度/字体)
+    ├── api/
+    │   ├── auth.ts       # 登录/登出/refresh/profile/menus/permissions
+    │   ├── system/{user,role,menu,dept,dict,log}.ts
+    │   └── project.ts    # 项目 + 成员
+    ├── store/modules/
+    │   ├── user.ts       # token/refreshToken/userInfo/roles/permissions,localStorage
+    │   └── app.ts        # sidebarCollapsed/menus/currentProjectId
+    ├── router/index.ts   # createWebHistory + 路由守卫(未登录 → /login) + NProgress
+    ├── utils/http.ts     # axios + JWT 注入 + 401 自动登出 + 统一错误提示
+    ├── layouts/index.vue # 200px 侧边栏(可折叠 64px)+ 顶栏(breadcrumb + 用户下拉)
+    └── views/
+        ├── login/index.vue           # 渐变背景 + admin/admin123 提示
+        ├── dashboard/index.vue       # 4 统计卡 + 4 步快速开始 + 个人卡片
+        ├── system/{user,role,menu,dept,dict,log}.vue  # 完整 CRUD
+        ├── project/{list,detail,members}.vue
+        ├── ai/{model,mcp}.vue        # Sprint 2 占位
+        ├── monitor/index.vue         # Sprint 4 占位
+        └── assistant/index.vue       # Sprint 3 占位
+```
+
+**关键约定**:
+- 权限控制:`userStore.hasPermission("system:user:add")`,无权限按钮自动隐藏
+- HTTP:统一在 `utils/http.ts` 拦截,业务代码只关心 data
+- 类型:每个 API 文件导出 VO/Save 类型,View 层强类型
+- 主题色:3 套(蓝/紫/绿)走 CSS 变量 `--ai-primary`,Sprint 4 加切换器
 
 ### 12.1 远程仓库(2026-06-08 已推送)
 

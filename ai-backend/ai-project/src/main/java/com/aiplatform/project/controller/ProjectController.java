@@ -36,7 +36,7 @@ public class ProjectController {
 
     @GetMapping("/{id}")
     @PreProjectRole
-    public Result<ProjectVO> get(@PathVariable Long id) {
+    public Result<ProjectVO> get(@PathVariable("id") Long id) {
         return Result.ok(projectService.get(id));
     }
 
@@ -55,14 +55,14 @@ public class ProjectController {
 
     @DeleteMapping("/{id}")
     @PreProjectRole("owner")
-    public Result<Void> delete(@PathVariable Long id) {
+    public Result<Void> delete(@PathVariable("id") Long id) {
         projectService.delete(id);
         return Result.ok();
     }
 
     @GetMapping("/{projectId}/members")
     @PreProjectRole
-    public Result<List<Map<String, Object>>> listMembers(@PathVariable Long projectId) {
+    public Result<List<Map<String, Object>>> listMembers(@PathVariable("projectId") Long projectId) {
         return Result.ok(memberService.listMembers(projectId));
     }
 }

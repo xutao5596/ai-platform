@@ -19,13 +19,13 @@ public class ProjectMemberController {
 
     @PostMapping("/{projectId}")
     @PreProjectRole("admin")
-    public Result<Long> add(@PathVariable Long projectId, @RequestBody @Valid MemberAddRequest req) {
+    public Result<Long> add(@PathVariable("projectId") Long projectId, @RequestBody @Valid MemberAddRequest req) {
         return Result.ok(memberService.addMember(projectId, req));
     }
 
     @PutMapping("/{projectId}/role")
     @PreProjectRole("admin")
-    public Result<Void> updateRole(@PathVariable Long projectId, @RequestBody Map<String, Object> body) {
+    public Result<Void> updateRole(@PathVariable("projectId") Long projectId, @RequestBody Map<String, Object> body) {
         Object uid = body == null ? null : body.get("userId");
         Object role = body == null ? null : body.get("roleCode");
         Long userId = uid == null ? null : (uid instanceof Number n ? n.longValue() : Long.parseLong(uid.toString()));
@@ -35,7 +35,7 @@ public class ProjectMemberController {
 
     @DeleteMapping("/{projectId}/{userId}")
     @PreProjectRole("admin")
-    public Result<Void> remove(@PathVariable Long projectId, @PathVariable Long userId) {
+    public Result<Void> remove(@PathVariable("projectId") Long projectId, @PathVariable("userId") Long userId) {
         memberService.removeMember(projectId, userId);
         return Result.ok();
     }
