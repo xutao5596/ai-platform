@@ -18,7 +18,10 @@
     "axios": "^1.7.9",
     "echarts": "^5.5.1",
     "vue-echarts": "^7.0.3",
-    "nprogress": "^0.2.0"
+    "nprogress": "^0.2.0",
+    "logicflow": "^1.0.1",
+    "@logicflow/core": "^2.2.3",
+    "@logicflow/extension": "^2.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
