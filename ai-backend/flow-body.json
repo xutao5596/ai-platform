@@ -1,0 +1,1 @@
+﻿{"projectId":1,"name":"E2E Flow","description":"e2e","design":"{\"nodes\":[{\"id\":\"start\",\"type\":\"start\"},{\"id\":\"end\",\"type\":\"end\"}],\"edges\":[{\"source\":\"start\",\"target\":\"end\"}]}"}
