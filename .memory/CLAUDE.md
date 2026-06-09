@@ -685,3 +685,52 @@ PR to main     → CI + PR Check
 ---
 
 **END OF MEMORY**
+
+---
+
+## 15. 永久记忆:Sprint 3.1 踩过的坑(2026-06-09)
+
+> **强制规范见 `docs/OPERATIONS-ENCODING.md`**,**每次启动 Agent 必读**。
+
+### 15.1 编码灾难
+- Windows + PowerShell 5.1 + Git 三方编码不一致 = 必踩坑
+- Git 按 GBK 解码 UTF-8 文件 → 中文变 mojibake → Agent 写回污染整个分支
+- PowerShell `Get-Content` / `Set-Content` 默认带 UTF-8 BOM → Java 编译报"unmappable character"
+- **绝对禁止**:`Get-Content` / `Set-Content` / `Out-File` 处理中文文件
+- **必须用**:`[System.IO.File]::ReadAllBytes` + `[System.IO.File]::WriteAllText(path, content, [System.Text.UTF8Encoding]::new($False))`
+
+### 15.2 LiteFlow 2.15.0 集成要点
+- **QLExpress 解析器无法处理 `flow.start` 这种带点的 ID**(会当成属性访问)
+- 必须用纯单词 ID: `start` / `end` / `llm` / `set_var` / `if_else`
+- **LiteFlow 必须配置 `rule-source`**,不能省略
+- placeholder chain 示例(`src/main/resources/liteflow/empty.el.xml`):
+  ```xml
+  <flow>
+      <chain name="placeholder">
+          THEN(start, end);
+      </chain>
+      <nodes>
+          <node id="start" class="com.aiplatform.flow.nodes.StartNode"/>
+          <node id="end" class="com.aiplatform.flow.nodes.EndNode"/>
+      </nodes>
+  </flow>
+  ```
+- 启动时扫描 `@LiteflowComponent` 注解,把节点注册到 `FlowBus` 才会成功
+
+### 15.3 MyBatis Plus 配置
+- **删除全局 `insert-strategy: not_null`**(Sprint 2 修复)
+- 默认所有字段都写入,避免 unique 索引冲突
+
+### 15.4 Agent 并行工作流(2026-06-09 验证有效)
+1. **API 契约先行**(`docs/api/sprint{N}-contracts.md`),锁定边界
+2. **创建 N 个 feature 分支**:`git checkout -b feature/sprint{N}-{a/b/c}`
+3. **3 Agent 并行**:每个 Agent 在自己分支上工作,严格遵守契约边界
+4. **主线程联调**:`git merge --no-ff` 三个分支 → 编译 → 启动 → 跑 E2E
+5. **回归测试通过**才打 tag
+
+### 15.5 踩坑检查清单(每次 Agent 提交前必跑)
+- [ ] 文件是否带 BOM?`Get-Content` 是否污染过?
+- [ ] `mvn -o compile` 是否 BUILD SUCCESS?
+- [ ] 启动后端是否正常?端口 8080 是否起来?
+- [ ] E2E 脚本是否 100% 通过?
+- [ ] 是否有未提交的临时文件?`git status --short` 看 untracked
