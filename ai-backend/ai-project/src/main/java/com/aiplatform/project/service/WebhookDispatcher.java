@@ -2,6 +2,7 @@ package com.aiplatform.project.service;
 
 import com.aiplatform.common.util.IdUtils;
 import com.aiplatform.common.util.JsonUtils;
+import com.aiplatform.framework.observability.BusinessMetrics;
 import com.aiplatform.project.entity.AiProjectWebhook;
 import com.aiplatform.project.entity.AiProjectWebhookLog;
 import com.aiplatform.project.mapper.AiProjectWebhookLogMapper;
@@ -152,6 +153,7 @@ public class WebhookDispatcher {
             if (!ok) {
                 log.info("Webhook 投递失败: webhookId={}, status={}, cost={}ms", w.getId(), status, cost);
             }
+            BusinessMetrics.webhookDispatch(w.getId(), eventType, ok ? "success" : "failed");
             return ok;
         } catch (Exception e) {
             long cost = System.currentTimeMillis() - start;
@@ -160,6 +162,7 @@ public class WebhookDispatcher {
             logRow.setCostMs(cost);
             saveLog(logRow);
             log.info("Webhook 投递异常: webhookId={}, cost={}ms, err={}", w.getId(), cost, e.getMessage());
+            BusinessMetrics.webhookDispatch(w.getId(), eventType, "exception");
             return false;
         }
     }

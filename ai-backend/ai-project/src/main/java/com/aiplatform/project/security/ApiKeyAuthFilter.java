@@ -1,6 +1,7 @@
 package com.aiplatform.project.security;
 
 import com.aiplatform.common.util.JsonUtils;
+import com.aiplatform.framework.observability.BusinessMetrics;
 import com.aiplatform.framework.security.ApiKeyContext;
 import com.aiplatform.project.entity.AiProjectApiKey;
 import com.aiplatform.project.mapper.AiProjectApiKeyMapper;
@@ -61,6 +62,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String[] creds = resolveCredentials(request);
         if (creds == null) {
+            BusinessMetrics.apiKeyCall(null, request.getRequestURI(), "unauthorized");
             writeUnauthorized(response, "缺少 API Key 凭证");
             return;
         }
@@ -68,19 +70,23 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
         String apiSecret = creds[1];
         AiProjectApiKey record = apiKeyMapper.selectByApiKey(apiKey);
         if (record == null) {
+            BusinessMetrics.apiKeyCall(null, request.getRequestURI(), "not_found");
             writeUnauthorized(response, "API Key 不存在");
             return;
         }
         if (record.getStatus() == null || record.getStatus() != 1) {
+            BusinessMetrics.apiKeyCall(record.getId(), request.getRequestURI(), "disabled");
             writeUnauthorized(response, "API Key 已禁用");
             return;
         }
         if (record.getApiSecret() == null || !record.getApiSecret().equals(apiSecret)) {
+            BusinessMetrics.apiKeyCall(record.getId(), request.getRequestURI(), "secret_mismatch");
             writeUnauthorized(response, "API Secret 不匹配");
             return;
         }
         if (record.getExpiresAt() != null && record.getExpiresAt() > 0
                 && record.getExpiresAt() < System.currentTimeMillis()) {
+            BusinessMetrics.apiKeyCall(record.getId(), request.getRequestURI(), "expired");
             writeUnauthorized(response, "API Key 已过期");
             return;
         }
@@ -101,6 +107,10 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
                 log.debug("Update apiKey lastUsed info failed: {}", logEx.getMessage());
             }
             chain.doFilter(request, response);
+            BusinessMetrics.apiKeyCall(record.getId(), request.getRequestURI(), "success");
+        } catch (Throwable t) {
+            BusinessMetrics.apiKeyCall(record.getId(), request.getRequestURI(), "error");
+            throw t;
         } finally {
             ApiKeyContext.clear();
         }

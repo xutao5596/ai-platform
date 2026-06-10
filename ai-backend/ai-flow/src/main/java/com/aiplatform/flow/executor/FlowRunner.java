@@ -11,6 +11,7 @@ import com.aiplatform.flow.registry.NodeRegistry;
 import com.aiplatform.flow.spi.FlowNode;
 import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
+import com.aiplatform.framework.observability.BusinessMetrics;
 import com.aiplatform.common.exception.BusinessException;
 import com.aiplatform.common.exception.ErrorCode;
 import com.aiplatform.common.util.JsonUtils;
@@ -57,6 +58,7 @@ public class FlowRunner {
     @Transactional
     public AiFlowRun execute(AiFlow flow, Long versionId, Map<String, Object> input, String triggerType) {
         if (flow == null) throw new BusinessException(ErrorCode.FLOW_NOT_FOUND);
+        BusinessMetrics.flowRunStart(flow.getId());
         AiFlowRun run = createRun(flow, versionId, input, triggerType);
         try {
             List<NodeSpec> specs = chainBuilder.buildSpecs(flow.getDesign());
@@ -86,6 +88,7 @@ public class FlowRunner {
             if (!liteResp.isSuccess()) {
                 String err = liteResp.getMessage();
                 markRunFailed(run, err == null ? "LiteFlow 执行失败" : err);
+                BusinessMetrics.flowRunEnd(flow.getId(), "failed", liteflowCost);
                 eventPublisher.publishEvent(new FlowRunFailedEvent(run.getId(), flow.getId(), err));
                 return run;
             }
@@ -103,16 +106,19 @@ public class FlowRunner {
             run.setFinishedAt(LocalDateTime.now());
             run.setCostMs(computeCostMs(run.getStartedAt(), run.getFinishedAt()));
             runMapper.updateById(run);
+            BusinessMetrics.flowRunEnd(flow.getId(), "success", run.getCostMs() == null ? liteflowCost : run.getCostMs());
             eventPublisher.publishEvent(new FlowRunSuccessEvent(run.getId(), flow.getId(), finalOutput));
             log.info("流程执行成功: flowId={}, runId={}, chainId={}, steps={}, liteflowCost={}ms",
                     flow.getId(), run.getId(), chainId, stepCount, liteflowCost);
             return run;
         } catch (BusinessException be) {
             markRunFailed(run, be.getMessage());
+            BusinessMetrics.flowRunEnd(flow.getId(), "failed", computeCostMs(run.getStartedAt(), LocalDateTime.now()));
             throw be;
         } catch (Exception e) {
             log.error("流程执行失败: flowId={}, runId={}", flow.getId(), run.getId(), e);
             markRunFailed(run, "流程执行异常: " + e.getMessage());
+            BusinessMetrics.flowRunEnd(flow.getId(), "failed", computeCostMs(run.getStartedAt(), LocalDateTime.now()));
             return run;
         }
     }

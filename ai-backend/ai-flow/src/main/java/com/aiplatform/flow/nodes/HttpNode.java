@@ -9,6 +9,7 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.aiplatform.framework.observability.BusinessMetrics;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.core.NodeComponent;
 import lombok.extern.slf4j.Slf4j;
@@ -144,12 +145,15 @@ public class HttpNode extends NodeComponent implements FlowNode {
                 if (outputKey == null || outputKey.isBlank()) outputKey = "httpResponse";
                 out.put(outputKey, Map.of("status", status, "body", respBody));
                 if (status >= 400) {
+                    BusinessMetrics.flowNodeExecute("http", "failed");
                     return NodeExecuteResult.fail("HTTP " + status + ": " + truncate(respBody, 500));
                 }
+                BusinessMetrics.flowNodeExecute("http", "success");
                 return NodeExecuteResult.success(out);
             }
         } catch (Exception e) {
             log.warn("HTTP 请求失败: url={}", url, e);
+            BusinessMetrics.flowNodeExecute("http", "failed");
             return NodeExecuteResult.fail("HTTP 请求失败: " + e.getMessage());
         }
     }
