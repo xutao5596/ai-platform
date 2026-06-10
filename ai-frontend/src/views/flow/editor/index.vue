@@ -403,7 +403,16 @@ function parseInputs(raw: any): Property[] {
 
 function normalizeDesignData(raw: any, defs: NodeDefinition[]) {
   const empty = { nodes: [] as any[], edges: [] as any[] }
-  if (!raw || typeof raw !== 'object') return empty
+  if (raw == null) return empty
+  // Backend stores design as a String column; if we got a JSON string, parse it.
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      return empty
+    }
+  }
+  if (typeof raw !== 'object') return empty
   let nodes: any[] = []
   let edges: any[] = []
   if (Array.isArray(raw.nodes)) nodes = raw.nodes
