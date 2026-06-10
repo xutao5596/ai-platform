@@ -5,6 +5,9 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -14,8 +17,10 @@ import java.util.Map;
 /**
  * 结束节点:把指定 variables 写入最终 output。
  */
+@Slf4j
+@LiteflowComponent("end")
 @Component
-public class EndNode implements FlowNode {
+public class EndNode extends NodeComponent implements FlowNode {
 
     @Override
     public String getTypeKey() {
@@ -69,11 +74,20 @@ public class EndNode implements FlowNode {
             out.put(key, v);
             out.put("result", v);
         } else {
-            // 输出全部 variables
             if (ctx.getVariables() != null) {
                 out.putAll(ctx.getVariables());
             }
         }
         return NodeExecuteResult.success(out);
+    }
+
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("EndNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
     }
 }

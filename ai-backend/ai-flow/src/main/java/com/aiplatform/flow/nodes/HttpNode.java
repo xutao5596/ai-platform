@@ -9,6 +9,8 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -30,8 +32,9 @@ import java.util.Map;
  *  - outputKey: 输出变量 Key(默认 "httpResponse")
  */
 @Slf4j
+@LiteflowComponent("http")
 @Component
-public class HttpNode implements FlowNode {
+public class HttpNode extends NodeComponent implements FlowNode {
 
     @Override
     public String getTypeKey() {
@@ -108,7 +111,6 @@ public class HttpNode implements FlowNode {
             HttpRequest req = HttpUtil.createRequest(m, url)
                     .timeout(timeout);
 
-            // headers
             if (headersJson != null && !headersJson.isBlank()) {
                 try {
                     @SuppressWarnings("unchecked")
@@ -122,7 +124,6 @@ public class HttpNode implements FlowNode {
                 }
             }
 
-            // body
             if (bodyRaw != null && !bodyRaw.isBlank()) {
                 if ("json".equalsIgnoreCase(bodyType)) {
                     req.body(bodyRaw).contentType("application/json");
@@ -151,6 +152,16 @@ public class HttpNode implements FlowNode {
             log.warn("HTTP 请求失败: url={}", url, e);
             return NodeExecuteResult.fail("HTTP 请求失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("HttpNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
     }
 
     private String renderUrl(String url, NodeContext ctx) {

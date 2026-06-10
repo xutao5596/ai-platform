@@ -5,6 +5,8 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -23,8 +25,9 @@ import java.util.Map;
  *      valueType: string / number / boolean / json
  */
 @Slf4j
+@LiteflowComponent("set_var")
 @Component
-public class SetVarNode implements FlowNode {
+public class SetVarNode extends NodeComponent implements FlowNode {
 
     @Override
     public String getTypeKey() {
@@ -101,6 +104,16 @@ public class SetVarNode implements FlowNode {
             log.warn("SetVar 解析失败: {}", e.getMessage());
             return NodeExecuteResult.fail("变量赋值失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("SetVarNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
     }
 
     private String render(Object v, NodeContext ctx) {

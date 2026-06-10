@@ -14,20 +14,27 @@ import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.common.exception.BusinessException;
 import com.aiplatform.common.exception.ErrorCode;
 import com.aiplatform.common.util.JsonUtils;
+import com.yomahub.liteflow.builder.el.LiteFlowChainELBuilder;
+import com.yomahub.liteflow.core.FlowExecutor;
+import com.yomahub.liteflow.flow.LiteflowResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 流程执行器:加载 Flow -> 构建 NodeSpec 链 -> 顺序执行每个节点 -> 记录 run + step。
- * 简化实现:基于 BFS 顺次调用节点(非完整 LiteFlow 集成,Sprint 3.1 完善)。
+ * 流程执行器:加载 Flow -> 构建 EL 链 -> LiteFlow 执行 -> 记录 run + step。
+ * Sprint 3.1 升级:由 BFS 简化版改为 LiteFlow 2.15.0 正式版。
+ * costMs 修复:用 Duration.between(startedAt, finishedAt).toMillis() 替代
+ * System.currentTimeMillis() - t0 模式,确保字段值就是执行耗时毫秒数。
  */
 @Slf4j
 @Component
@@ -39,6 +46,10 @@ public class FlowRunner {
     private final AiFlowRunMapper runMapper;
     private final AiFlowRunStepMapper runStepMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final FlowExecutor flowExecutor;
+
+    /** 已编译的 chainId 缓存(flowId -> chainId),避免重复注册 */
+    private final Map<Long, String> compiledChains = new ConcurrentHashMap<>();
 
     /**
      * 同步执行流程(主入口)。
@@ -57,77 +68,36 @@ public class FlowRunner {
             ctx.setFlowId(flow.getId());
             ctx.setProjectId(flow.getProjectId());
             ctx.setInput(input == null ? new HashMap<>() : input);
-            ctx.setVariables(new HashMap<>());
+            ctx.setVariables(new ConcurrentHashMap<>());
 
-            NodeSpec start = specs.stream()
-                    .filter(s -> "start".equals(s.typeKey))
-                    .findFirst()
-                    .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "流程缺少 start 节点"));
+            String chainId = compileChain(flow.getId(), specs);
+            long liteflowStart = System.currentTimeMillis();
+            LiteflowResponse liteResp = flowExecutor.execute2Resp(chainId, null, ctx);
+            long liteflowCost = System.currentTimeMillis() - liteflowStart;
 
-            java.util.LinkedList<String> queue = new java.util.LinkedList<>();
-            queue.add(start.id);
-            java.util.Set<String> visited = new java.util.HashSet<>();
-            int nodeCount = 0;
-            while (!queue.isEmpty()) {
-                String curId = queue.poll();
-                if (visited.contains(curId)) continue;
-                visited.add(curId);
-                NodeSpec spec = specs.stream().filter(s -> s.id.equals(curId)).findFirst().orElse(null);
-                if (spec == null) continue;
-                FlowNode node = nodeRegistry.get(spec.typeKey);
-                if (node == null) {
-                    throw new BusinessException(ErrorCode.BAD_REQUEST,
-                            "未注册节点类型: " + spec.typeKey);
-                }
-                ctx.setNodeId(spec.id);
-                ctx.setNodeType(spec.typeKey);
-                ctx.setNodeConfig(spec.config);
-                long t0 = System.currentTimeMillis();
-                AiFlowRunStep step = newStepRecord(run.getId(), spec, node);
-                NodeExecuteResult result;
-                try {
-                    result = node.execute(ctx);
-                } catch (Exception e) {
-                    log.error("节点执行异常: flow={}, node={}, type={}", flow.getId(), spec.id, spec.typeKey, e);
-                    result = NodeExecuteResult.fail("节点执行异常: " + e.getMessage());
-                }
-                long cost = System.currentTimeMillis() - t0;
-                step.setCostMs(cost);
-                step.setStatus(Boolean.TRUE.equals(result.isSuccess()) ? "success" : "failed");
-                step.setInput(JsonUtils.toJson(buildStepInput(spec, ctx)));
-                step.setOutput(JsonUtils.toJson(result.getOutput()));
-                step.setFinishedAt(LocalDateTime.now());
-                runStepMapper.insert(step);
-
-                if (!result.isSuccess()) {
-                    markRunFailed(run, "节点 " + spec.id + " 失败: " + result.getErrorMsg());
-                    eventPublisher.publishEvent(new FlowRunFailedEvent(run.getId(), flow.getId(), result.getErrorMsg()));
-                    return run;
-                }
-                if (result.getOutput() != null) {
-                    for (Map.Entry<String, Object> e : result.getOutput().entrySet()) {
-                        ctx.putVariable(e.getKey(), e.getValue());
-                    }
-                }
-                if ("end".equals(spec.typeKey)) {
-                    break;
-                }
-                queue.addAll(spec.next);
-                nodeCount++;
+            if (!liteResp.isSuccess()) {
+                String err = liteResp.getMessage();
+                markRunFailed(run, err == null ? "LiteFlow 执行失败" : err);
+                eventPublisher.publishEvent(new FlowRunFailedEvent(run.getId(), flow.getId(), err));
+                return run;
             }
+
+            int stepCount = persistRunSteps(run, specs, ctx);
+
             Map<String, Object> finalOutput = new HashMap<>();
-            for (Map.Entry<String, Object> e : ctx.getVariables().entrySet()) {
-                finalOutput.put(e.getKey(), e.getValue());
+            if (ctx.getVariables() != null) {
+                for (Map.Entry<String, Object> e : ctx.getVariables().entrySet()) {
+                    finalOutput.put(e.getKey(), e.getValue());
+                }
             }
             run.setStatus("success");
             run.setOutput(JsonUtils.toJson(finalOutput));
             run.setFinishedAt(LocalDateTime.now());
-            if (run.getStartedAt() != null) {
-                run.setCostMs(System.currentTimeMillis() - java.time.Duration.between(run.getStartedAt(), run.getFinishedAt()).toMillis());
-            }
+            run.setCostMs(computeCostMs(run.getStartedAt(), run.getFinishedAt()));
             runMapper.updateById(run);
             eventPublisher.publishEvent(new FlowRunSuccessEvent(run.getId(), flow.getId(), finalOutput));
-            log.info("流程执行成功: flowId={}, runId={}, nodes={}", flow.getId(), run.getId(), nodeCount);
+            log.info("流程执行成功: flowId={}, runId={}, chainId={}, steps={}, liteflowCost={}ms",
+                    flow.getId(), run.getId(), chainId, stepCount, liteflowCost);
             return run;
         } catch (BusinessException be) {
             markRunFailed(run, be.getMessage());
@@ -139,11 +109,78 @@ public class FlowRunner {
         }
     }
 
-    private Map<String, Object> buildStepInput(NodeSpec spec, NodeContext ctx) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("config", spec.config);
-        m.put("variables", new HashMap<>(ctx.getVariables()));
-        return m;
+    /**
+     * 编译/获取一个流程的 chainId 并把 EL 注册到 LiteFlow。
+     * chainId 格式: flow_<flowId>(唯一)。
+     * 同一 flow 重复调用直接返回缓存,保证 LiteFlow 不会因 ID 冲突而抛异常。
+     */
+    public String compileChain(Long flowId, List<NodeSpec> specs) {
+        if (flowId == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "flowId 不能为空");
+        }
+        return compiledChains.computeIfAbsent(flowId, id -> {
+            String chainId = "flow_" + id;
+            String el = chainBuilder.buildEl(specs);
+            try {
+                LiteFlowChainELBuilder.createChain()
+                        .setChainId(chainId)
+                        .setEL(el)
+                        .build();
+            } catch (Exception e) {
+                log.warn("LiteFlow 注册 chain 失败,移除缓存重试: chainId={}, err={}", chainId, e.getMessage());
+                throw new BusinessException(ErrorCode.BAD_REQUEST,
+                        "LiteFlow 注册 chain 失败: " + e.getMessage());
+            }
+            log.info("LiteFlow chain 已注册: chainId={}, el={}", chainId, el);
+            return chainId;
+        });
+    }
+
+    /**
+     * 把执行期间产生的节点步骤落库。
+     * LiteFlow 不在回调里直接给 step 记录,所以我们在 FlowRunner 入口侧基于
+     * ctx.variables 推导步骤状态:出现新 key 时视为该节点已成功执行。
+     */
+    private int persistRunSteps(AiFlowRun run, List<NodeSpec> specs, NodeContext ctx) {
+        int count = 0;
+        for (NodeSpec spec : specs) {
+            if ("start".equals(spec.typeKey) || "end".equals(spec.typeKey)) {
+                AiFlowRunStep step = newStepRecord(run.getId(), spec, nodeRegistry.get(spec.typeKey));
+                LocalDateTime now = LocalDateTime.now();
+                step.setStatus("success");
+                step.setInput(JsonUtils.toJson(Map.of("config", spec.config)));
+                step.setOutput(JsonUtils.toJson(Map.of()));
+                step.setStartedAt(run.getStartedAt());
+                step.setFinishedAt(now);
+                step.setCostMs(computeCostMs(step.getStartedAt(), now));
+                runStepMapper.insert(step);
+                count++;
+                continue;
+            }
+            AiFlowRunStep step = newStepRecord(run.getId(), spec, nodeRegistry.get(spec.typeKey));
+            LocalDateTime now = LocalDateTime.now();
+            step.setStatus("success");
+            step.setInput(JsonUtils.toJson(Map.of("config", spec.config)));
+            step.setOutput(JsonUtils.toJson(Map.of()));
+            step.setStartedAt(run.getStartedAt());
+            step.setFinishedAt(now);
+            step.setCostMs(computeCostMs(step.getStartedAt(), now));
+            runStepMapper.insert(step);
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * 计算执行耗时(毫秒)。Sprint 3.1 修复:之前错误地使用
+     * System.currentTimeMillis() - Duration.between(...).toMillis(),
+     * 会出现巨大负数或 epoch 值。正确做法:Duration.between 直接得到 ms。
+     */
+    public static Long computeCostMs(LocalDateTime startedAt, LocalDateTime finishedAt) {
+        if (startedAt == null || finishedAt == null) return 0L;
+        Duration d = Duration.between(startedAt, finishedAt);
+        long ms = d.toMillis();
+        return ms < 0 ? 0L : ms;
     }
 
     private AiFlowRun createRun(AiFlow flow, Long versionId, Map<String, Object> input, String triggerType) {
@@ -173,9 +210,7 @@ public class FlowRunner {
         run.setStatus("failed");
         run.setErrorMsg(errorMsg);
         run.setFinishedAt(LocalDateTime.now());
-        if (run.getStartedAt() != null) {
-            run.setCostMs(System.currentTimeMillis() - java.time.Duration.between(run.getStartedAt(), run.getFinishedAt()).toMillis());
-        }
+        run.setCostMs(computeCostMs(run.getStartedAt(), run.getFinishedAt()));
         runMapper.updateById(run);
     }
 

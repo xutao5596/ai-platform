@@ -71,3 +71,8 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+
+liteflow:
+  rule-source: classpath:/liteflow/empty.el.xml
+  print-banner: false
+  print-execution-log: false

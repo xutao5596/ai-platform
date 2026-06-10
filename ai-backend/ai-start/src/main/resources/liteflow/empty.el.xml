@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <chain name="placeholder">
+        THEN(start, end);
+    </chain>
+    <nodes>
+        <node id="start" class="com.aiplatform.flow.nodes.StartNode"/>
+        <node id="end" class="com.aiplatform.flow.nodes.EndNode"/>
+    </nodes>
+</flow>

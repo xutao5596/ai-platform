@@ -5,6 +5,8 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
@@ -22,8 +24,9 @@ import java.util.Map;
  * 注:实际路由由设计器中节点的多出边配置承担,本节点仅设置 branch 变量供后续节点使用。
  */
 @Slf4j
+@LiteflowComponent("if_else")
 @Component
-public class IfElseNode implements FlowNode {
+public class IfElseNode extends NodeComponent implements FlowNode {
 
     private final ExpressionParser parser = new SpelExpressionParser();
 
@@ -99,15 +102,9 @@ public class IfElseNode implements FlowNode {
                     ec.setVariable(e.getKey(), e.getValue());
                 }
             }
-            Expression exp = parser.parseExpression(exprStr);
-            // 兼容:若表达式直接引用未加 # 的变量(如 "x > 10"),自动加 #
-            // SpEL 严格区分 #var(变量)与 obj.prop(根对象属性),为了用户体验
-            // 在 setVariable 之后,统一把未加 # 的标识符补上 #
-            // 这里通过把 ctx.input 暴露为根对象并修正表达式实现
             if (ctx.getInput() != null && !ctx.getInput().isEmpty()) {
                 ec.setVariable("_inputRoot", ctx.getInput());
             }
-            // 简化:将裸标识符替换为 #ident
             String processed = addHashToIdentifiers(exprStr);
             Expression exp2 = parser.parseExpression(processed);
             Object val = exp2.getValue(ec);
@@ -129,10 +126,16 @@ public class IfElseNode implements FlowNode {
         }
     }
 
-    /**
-     * 简易 SpEL 表达式预处理:把表达式里的裸标识符替换为 #ident
-     * 仅当标识符前面不是 . # 字母数字下划线时替换
-     */
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("IfElseNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
+    }
+
     private String addHashToIdentifiers(String expr) {
         if (expr == null || expr.isEmpty()) return expr;
         StringBuilder sb = new StringBuilder();

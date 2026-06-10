@@ -9,6 +9,8 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,9 +27,10 @@ import java.util.Map;
  *  - outputKey: 输出变量 Key(默认 "promptText")
  */
 @Slf4j
+@LiteflowComponent("prompt")
 @Component
 @RequiredArgsConstructor
-public class PromptNode implements FlowNode {
+public class PromptNode extends NodeComponent implements FlowNode {
 
     private final AiPromptMapper promptMapper;
     private final AiPromptVersionMapper versionMapper;
@@ -87,7 +90,6 @@ public class PromptNode implements FlowNode {
         if (p == null) {
             return NodeExecuteResult.fail("提示词不存在: " + promptId);
         }
-        // 取激活版本
         AiPromptVersion v = versionMapper.selectActive(promptId);
         if (v == null) {
             return NodeExecuteResult.fail("提示词无激活版本: " + promptId);
@@ -102,6 +104,16 @@ public class PromptNode implements FlowNode {
         out.put("rendered", rendered);
         out.put(outputKey, rendered);
         return NodeExecuteResult.success(out);
+    }
+
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("PromptNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
     }
 
     private String render(String template, NodeContext ctx) {

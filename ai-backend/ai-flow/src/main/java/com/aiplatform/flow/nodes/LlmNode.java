@@ -6,6 +6,8 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -26,9 +28,10 @@ import java.util.Map;
  *  - outputKey: 输出变量 Key(默认 "llmOutput")
  */
 @Slf4j
+@LiteflowComponent("llm")
 @Component
 @RequiredArgsConstructor
-public class LlmNode implements FlowNode {
+public class LlmNode extends NodeComponent implements FlowNode {
 
     private final ChatService chatService;
 
@@ -114,10 +117,19 @@ public class LlmNode implements FlowNode {
         }
     }
 
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("LlmNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
+    }
+
     private String render(String template, NodeContext ctx) {
         if (template == null) return "";
         String result = template;
-        // 替换 {{var}}
         if (ctx.getVariables() != null) {
             for (Map.Entry<String, Object> e : ctx.getVariables().entrySet()) {
                 String token = "{{" + e.getKey() + "}}";
@@ -126,7 +138,6 @@ public class LlmNode implements FlowNode {
                 }
             }
         }
-        // 替换 {{input.xxx}}
         if (ctx.getInput() != null) {
             for (Map.Entry<String, Object> e : ctx.getInput().entrySet()) {
                 String token = "{{input." + e.getKey() + "}}";

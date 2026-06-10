@@ -5,6 +5,9 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -16,8 +19,10 @@ import java.util.Map;
  * 起始节点:把入参(input)写入 variables。
  * 任何流程都必须以 start 节点开始。
  */
+@Slf4j
+@LiteflowComponent("start")
 @Component
-public class StartNode implements FlowNode {
+public class StartNode extends NodeComponent implements FlowNode {
 
     @Override
     public String getTypeKey() {
@@ -70,5 +75,15 @@ public class StartNode implements FlowNode {
         Map<String, Object> out = new HashMap<>();
         out.put("started", true);
         return NodeExecuteResult.success(out);
+    }
+
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("StartNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
     }
 }

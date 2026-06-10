@@ -11,6 +11,8 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.core.NodeComponent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -30,9 +32,10 @@ import java.util.Map;
  *  - outputKey: 输出变量 Key(默认 "kbResults")
  */
 @Slf4j
+@LiteflowComponent("knowledge_search")
 @Component
 @RequiredArgsConstructor
-public class KnowledgeSearchNode implements FlowNode {
+public class KnowledgeSearchNode extends NodeComponent implements FlowNode {
 
     private final AiKnowledgeMapper knowledgeMapper;
     private final AiKnowledgeChunkMapper chunkMapper;
@@ -94,7 +97,6 @@ public class KnowledgeSearchNode implements FlowNode {
         String query = ctx.getConfigString("query");
         if (query == null) query = ctx.getConfigString("queryTemplate");
         if (query != null) {
-            // 渲染 {{var}}
             if (ctx.getVariables() != null) {
                 for (Map.Entry<String, Object> e : ctx.getVariables().entrySet()) {
                     String token = "{{" + e.getKey() + "}}";
@@ -112,7 +114,6 @@ public class KnowledgeSearchNode implements FlowNode {
         if (outputKey == null || outputKey.isBlank()) outputKey = "kbResults";
 
         try {
-            // 1. 取知识库列表
             List<AiKnowledge> kbs;
             String kbIdsStr = ctx.getConfigString("kbIds");
             if (kbIdsStr != null && !kbIdsStr.isBlank()) {
@@ -136,11 +137,9 @@ public class KnowledgeSearchNode implements FlowNode {
                 return NodeExecuteResult.success(out);
             }
 
-            // 2. 计算 query 向量(简化:256 维)
             int dim = 256;
             float[] qv = embeddingService.embed(query, dim);
 
-            // 3. 检索
             List<Map<String, Object>> hits = new ArrayList<>();
             for (AiKnowledge kb : kbs) {
                 List<HnswlibVectorStore.ScoredResult> sr = vectorStore.search(kb.getId(), qv, topK);
@@ -158,13 +157,11 @@ public class KnowledgeSearchNode implements FlowNode {
                     hits.add(m);
                 }
             }
-            // 按 score 排序
             hits.sort((a, b) -> Float.compare(
                     ((Number) b.get("score")).floatValue(),
                     ((Number) a.get("score")).floatValue()));
             if (hits.size() > topK) hits = hits.subList(0, topK);
 
-            // 4. 拼 context
             StringBuilder sb = new StringBuilder();
             for (Map<String, Object> h : hits) {
                 sb.append(h.get("content")).append("\n\n");
@@ -179,6 +176,16 @@ public class KnowledgeSearchNode implements FlowNode {
             log.error("知识库检索失败", e);
             return NodeExecuteResult.fail("知识库检索失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public void process() throws Exception {
+        NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx == null) {
+            log.warn("KnowledgeSearchNode 收到空 NodeContext,跳过");
+            return;
+        }
+        execute(ctx);
     }
 
     private Integer readInt(NodeContext ctx, String key, int def) {
