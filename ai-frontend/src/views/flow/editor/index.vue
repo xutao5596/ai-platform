@@ -350,6 +350,7 @@ function initLogicFlow(initialData?: any) {
   })
 
   lf.on('history:change', () => {
+    if (!initialLoaded) return
     if (!dirty.value) {
       dirty.value = true
       flowStore.markDirty()
@@ -359,8 +360,8 @@ function initLogicFlow(initialData?: any) {
     scheduleAutoSave()
   })
 
-  lf.on('node:drag', () => { dirty.value = true; scheduleAutoSave() })
-  lf.on('edge:add', () => { dirty.value = true; scheduleAutoSave() })
+  lf.on('node:drag', () => { if (initialLoaded) { dirty.value = true; scheduleAutoSave() } })
+  lf.on('edge:add', () => { if (initialLoaded) { dirty.value = true; scheduleAutoSave() } })
 
   // Normalize incoming data: strip system properties & keep _label/_sub on existing nodes
   const data = normalizeDesignData(initialData, nodeDefs.value)
@@ -524,6 +525,7 @@ function scheduleAutoSave() {
   if (!initialLoaded) return
   if (autosaveTimer) clearTimeout(autosaveTimer)
   autosaveTimer = setTimeout(async () => {
+    if (!initialLoaded) return
     if (!lfRef.value || !dirty.value) return
     try {
       const data = lfRef.value.getGraphData()

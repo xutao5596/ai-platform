@@ -70,29 +70,49 @@ export function buildNodeViewModel(def: NodeDefinition) {
       const sub = escapeHtml(props._sub || def.description || '')
       const iconSvg = iconFor(def.typeKey, color)
       const runTag = status ? `<div class="lf-run-status ${status}" style="position:absolute;top:6px;right:8px;font-size:10px;padding:1px 6px;border-radius:8px;background:${statusColor};color:#fff;">${status === 'success' ? '成功' : status === 'failed' ? '失败' : status === 'running' ? '运行中' : status}</div>` : ''
-      rootEl.innerHTML = `
-        <div class="ai-node" style="position:relative;width:${this.props.model.width}px;min-height:${this.props.model.height}px;box-sizing:border-box;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.06);${highlight}${dim}">
-          ${runTag}
-          <div class="ai-node-header" style="display:flex;align-items:center;padding:10px 12px;gap:8px;">
-            <div class="ai-node-icon" style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:${color}14;color:${color};flex-shrink:0;">
-              ${iconSvg}
-            </div>
-            <div class="ai-node-text" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
-              <div class="ai-node-label" style="font-size:13px;font-weight:600;color:#303133;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
-              <div class="ai-node-desc" style="font-size:11px;color:#909399;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sub}</div>
-            </div>
+      // De-dupe prior content we created. (Preact's reconciler leaves the
+      // foreignObject's children alone between renders, but our own setHtml
+      // gets called multiple times.)
+      while (rootEl.firstChild) rootEl.removeChild(rootEl.firstChild)
+      const wrap = document.createElement('div')
+      wrap.className = 'ai-node'
+      wrap.style.cssText = `position:relative;width:${this.props.model.width}px;min-height:${this.props.model.height}px;box-sizing:border-box;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.06);${highlight}${dim}`
+      wrap.innerHTML = `
+        ${runTag}
+        <div class="ai-node-header" style="display:flex;align-items:center;padding:10px 12px;gap:8px;">
+          <div class="ai-node-icon" style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:${color}14;color:${color};flex-shrink:0;">${iconSvg}</div>
+          <div class="ai-node-text" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <div class="ai-node-label" style="font-size:13px;font-weight:600;color:#303133;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
+            <div class="ai-node-desc" style="font-size:11px;color:#909399;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sub}</div>
           </div>
         </div>
       `
+      rootEl.appendChild(wrap)
     }
     shouldUpdate() {
       const cur = JSON.stringify(this.props.model.properties || {})
+      if (this.currentProperties === undefined) {
+        this.currentProperties = cur
+        this.preProperties = cur
+        return true
+      }
       if (cur !== this.currentProperties) {
         this.preProperties = this.currentProperties
         this.currentProperties = cur
         return true
       }
       return false
+    }
+    componentDidMount() {
+      // The HtmlNode base class also calls setHtml here, but we go through
+      // setHtml directly. rootEl getter is wired by HtmlNode so Preact's
+      // ref is what we need.
+      const fo: SVGForeignObjectElement | null = (this as any).rootEl || null
+      if (fo) this.setHtml(fo)
+    }
+    componentDidUpdate() {
+      const fo: SVGForeignObjectElement | null = (this as any).rootEl || null
+      if (fo && this.shouldUpdate()) this.setHtml(fo)
     }
   }
 
