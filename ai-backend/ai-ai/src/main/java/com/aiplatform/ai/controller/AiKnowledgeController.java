@@ -2,12 +2,15 @@ package com.aiplatform.ai.controller;
 
 import com.aiplatform.ai.dto.KnowledgeSaveRequest;
 import com.aiplatform.ai.entity.AiKnowledge;
+import com.aiplatform.ai.entity.AiKnowledgeDoc;
+import com.aiplatform.ai.service.AiKnowledgeDocService;
 import com.aiplatform.ai.service.AiKnowledgeService;
 import com.aiplatform.common.api.Result;
 import com.aiplatform.project.security.ProjectRoleChecker;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -17,6 +20,7 @@ import java.util.List;
 public class AiKnowledgeController {
 
     private final AiKnowledgeService knowledgeService;
+    private final AiKnowledgeDocService docService;
     private final ProjectRoleChecker projectRoleChecker;
 
     @GetMapping("/list")
@@ -61,6 +65,34 @@ public class AiKnowledgeController {
             projectRoleChecker.requireAtLeast(k.getProjectId(), "admin");
         }
         knowledgeService.delete(id);
+        return Result.ok();
+    }
+
+    @PostMapping(value = "/{id}/doc/upload", consumes = "multipart/form-data")
+    public Result<Long> uploadDoc(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        AiKnowledge k = knowledgeService.get(id);
+        if (k.getProjectId() != null) {
+            projectRoleChecker.requireAtLeast(k.getProjectId(), "developer");
+        }
+        return Result.ok(docService.upload(id, file));
+    }
+
+    @GetMapping("/{id}/doc/list")
+    public Result<List<AiKnowledgeDoc>> listDocs(@PathVariable Long id) {
+        AiKnowledge k = knowledgeService.get(id);
+        if (k.getProjectId() != null) {
+            projectRoleChecker.requireAtLeast(k.getProjectId(), "viewer");
+        }
+        return Result.ok(docService.listByKb(id));
+    }
+
+    @DeleteMapping("/{id}/doc/{docId}")
+    public Result<Void> deleteDoc(@PathVariable Long id, @PathVariable Long docId) {
+        AiKnowledge k = knowledgeService.get(id);
+        if (k.getProjectId() != null) {
+            projectRoleChecker.requireAtLeast(k.getProjectId(), "admin");
+        }
+        docService.delete(docId);
         return Result.ok();
     }
 }
