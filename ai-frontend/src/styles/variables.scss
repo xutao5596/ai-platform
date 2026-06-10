@@ -1,0 +1,103 @@
+/* ===========================================================
+ * Theme Variables (Sprint 5 - Agent F: Dark Theme)
+ * Project-prefixed CSS variables. Light defaults + .dark override.
+ * Use SCSS only to keep nested mixins; output is plain CSS.
+ * =========================================================== */
+
+:root {
+  /* Brand */
+  --ai-primary: #409eff;
+  --ai-primary-dark: #1d4ed8;
+  --ai-success: #10b981;
+  --ai-warning: #f59e0b;
+  --ai-danger: #ef4444;
+  --ai-info: #909399;
+
+  /* Surfaces */
+  --ai-bg: #f0f2f5;
+  --ai-bg-elevated: #ffffff;
+  --ai-bg-muted: #fafbfc;
+  --ai-bg-hover: #e6e8eb;
+
+  /* Text */
+  --ai-text: #1f2937;
+  --ai-text-regular: #303133;
+  --ai-text-secondary: #6b7280;
+  --ai-text-placeholder: #c0c4cc;
+  --ai-text-on-primary: #ffffff;
+
+  /* Lines */
+  --ai-border: #e5e7eb;
+  --ai-border-light: #ebeef5;
+  --ai-divider: #e5e7eb;
+
+  /* Sidebar (kept dark in both themes to preserve brand identity) */
+  --ai-sidebar-bg: #001529;
+  --ai-sidebar-text: rgba(255, 255, 255, 0.85);
+  --ai-sidebar-active: #409eff;
+  --ai-sidebar-hover: rgba(255, 255, 255, 0.08);
+
+  /* Layout */
+  --ai-sidebar-width: 200px;
+  --ai-header-height: 56px;
+
+  /* Shadows */
+  --ai-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ai-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* Chat-specific surfaces */
+  --ai-chat-aside-bg: #f5f7fa;
+  --ai-chat-main-bg: #fafbfc;
+  --ai-chat-bubble-bg: #ffffff;
+  --ai-chat-bubble-user-bg: var(--ai-primary);
+  --ai-chat-bubble-user-text: #ffffff;
+  --ai-chat-tool-bg: #fdf6ec;
+  --ai-chat-tool-result-bg: #f0f9eb;
+}
+
+:root.dark {
+  /* Brand stays the same in dark; only adjust intensity if needed */
+  --ai-primary: #409eff;
+  --ai-primary-dark: #2563eb;
+  --ai-success: #34d399;
+  --ai-warning: #fbbf24;
+  --ai-danger: #f87171;
+  --ai-info: #a3a3a3;
+
+  /* Surfaces (dark) */
+  --ai-bg: #141414;
+  --ai-bg-elevated: #1f1f1f;
+  --ai-bg-muted: #1a1a1a;
+  --ai-bg-hover: #2a2a2a;
+
+  /* Text (dark) */
+  --ai-text: #e5e5e5;
+  --ai-text-regular: #d4d4d4;
+  --ai-text-secondary: #a3a3a3;
+  --ai-text-placeholder: #525252;
+  --ai-text-on-primary: #ffffff;
+
+  /* Lines (dark) */
+  --ai-border: #3a3a3a;
+  --ai-border-light: #2a2a2a;
+  --ai-divider: #2a2a2a;
+
+  /* Sidebar in dark mode: slightly lighter than base for separation */
+  --ai-sidebar-bg: #0f0f0f;
+  --ai-sidebar-text: rgba(229, 229, 229, 0.85);
+  --ai-sidebar-active: #409eff;
+  --ai-sidebar-hover: rgba(255, 255, 255, 0.06);
+
+  /* Shadows softer in dark */
+  --ai-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ai-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
+
+  /* Chat-specific */
+  --ai-chat-aside-bg: #1a1a1a;
+  --ai-chat-main-bg: #141414;
+  --ai-chat-bubble-bg: #262626;
+  --ai-chat-bubble-user-bg: #1d4ed8;
+  --ai-chat-bubble-user-text: #ffffff;
+  --ai-chat-tool-bg: #2a2418;
+  --ai-chat-tool-result-bg: #16291f;
+}

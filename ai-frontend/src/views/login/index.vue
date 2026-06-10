@@ -94,13 +94,14 @@ async function onSubmit() {
   position: relative;
   width: 400px;
   padding: 40px;
-  background: #fff;
+  background: var(--ai-bg-elevated);
+  color: var(--ai-text);
   border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 .login-header { text-align: center; margin-bottom: 32px; }
 .brand { font-size: 48px; color: var(--ai-primary); }
-.title { font-size: 24px; font-weight: 600; margin: 12px 0 4px; }
+.title { font-size: 24px; font-weight: 600; margin: 12px 0 4px; color: var(--ai-text); }
 .subtitle { font-size: 13px; color: var(--ai-text-secondary); }
 .login-btn { width: 100%; height: 44px; font-size: 16px; letter-spacing: 4px; }
 .login-tip {
@@ -110,7 +111,7 @@ async function onSubmit() {
   text-align: center;
 }
 .login-tip code {
-  background: #f3f4f6;
+  background: var(--ai-bg-hover);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: monospace;

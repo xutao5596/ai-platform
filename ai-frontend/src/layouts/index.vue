@@ -8,11 +8,9 @@
       <el-menu
         :default-active="activePath"
         :collapse="appStore.sidebarCollapsed"
-        background-color="#001529"
-        text-color="rgba(255,255,255,0.85)"
-        active-text-color="#409eff"
         router
         class="sidebar-menu"
+        :style="{ '--el-menu-bg-color': 'var(--ai-sidebar-bg)', '--el-menu-text-color': 'var(--ai-sidebar-text)', '--el-menu-active-color': 'var(--ai-sidebar-active)', '--el-menu-hover-bg-color': 'var(--ai-sidebar-hover)' }"
       >
         <template v-for="m in menus" :key="m.id">
           <el-menu-item :index="resolvePath(m)">
@@ -173,16 +171,32 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 0 16px;
-  color: #fff;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  color: var(--ai-sidebar-text);
+  border-bottom: 1px solid var(--ai-sidebar-hover);
 }
 .logo-icon { font-size: 22px; color: var(--ai-primary); }
 .logo-text { font-size: 16px; font-weight: 600; white-space: nowrap; }
 .sidebar-menu { border-right: none; }
 .sidebar-menu:not(.el-menu--collapse) { width: 200px; }
+.sidebar-menu :deep(.el-menu) {
+  background-color: var(--ai-sidebar-bg);
+  color: var(--ai-sidebar-text);
+}
+.sidebar-menu :deep(.el-menu-item),
+.sidebar-menu :deep(.el-sub-menu__title) {
+  color: var(--ai-sidebar-text);
+}
+.sidebar-menu :deep(.el-menu-item:hover),
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
+  background-color: var(--ai-sidebar-hover);
+}
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  color: var(--ai-sidebar-active);
+}
 
 .header {
-  background: #fff;
+  background: var(--ai-bg-elevated);
+  color: var(--ai-text);
   border-bottom: 1px solid var(--ai-border);
   display: flex;
   align-items: center;
@@ -192,18 +206,20 @@ onMounted(async () => {
 }
 .header-left { display: flex; align-items: center; gap: 16px; }
 .header-right { display: flex; align-items: center; gap: 16px; }
-.user-trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.user-trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--ai-text); }
 .user-name { font-size: 14px; }
 .lang-trigger {
   display: flex; align-items: center; gap: 4px; cursor: pointer;
   padding: 4px 8px; border-radius: 4px; font-size: 14px;
+  color: var(--ai-text);
 }
-.lang-trigger:hover { background: var(--ai-bg); }
+.lang-trigger:hover { background: var(--ai-bg-hover); }
 .lang-label { font-size: 13px; }
 
 .main {
   padding: 16px;
   background: var(--ai-bg);
+  color: var(--ai-text);
   overflow: auto;
 }
 

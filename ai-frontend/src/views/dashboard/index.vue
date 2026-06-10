@@ -5,28 +5,28 @@
         <el-card class="stat-card">
           <div class="stat-label">{{ t('dashboard.myProjects') }}</div>
           <div class="stat-value">{{ stats.projectCount }}</div>
-          <el-icon class="stat-icon" style="color:#409eff;"><Folder /></el-icon>
+          <el-icon class="stat-icon stat-icon-primary"><Folder /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
           <div class="stat-label">{{ t('dashboard.flowCount') }}</div>
           <div class="stat-value">0</div>
-          <el-icon class="stat-icon" style="color:#10b981;"><Connection /></el-icon>
+          <el-icon class="stat-icon stat-icon-success"><Connection /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
           <div class="stat-label">{{ t('dashboard.knowledgeCount') }}</div>
           <div class="stat-value">0</div>
-          <el-icon class="stat-icon" style="color:#f59e0b;"><Reading /></el-icon>
+          <el-icon class="stat-icon stat-icon-warning"><Reading /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
           <div class="stat-label">{{ t('dashboard.chatToday') }}</div>
           <div class="stat-value">0</div>
-          <el-icon class="stat-icon" style="color:#8b5cf6;"><ChatDotRound /></el-icon>
+          <el-icon class="stat-icon stat-icon-purple"><ChatDotRound /></el-icon>
         </el-card>
       </el-col>
     </el-row>
@@ -102,6 +102,8 @@ onMounted(async () => {
 .stat-card {
   position: relative;
   overflow: hidden;
+  background: var(--ai-bg-elevated);
+  color: var(--ai-text);
 }
 .stat-label { color: var(--ai-text-secondary); font-size: 13px; }
 .stat-value { font-size: 28px; font-weight: 600; margin-top: 8px; color: var(--ai-text); }
@@ -113,11 +115,15 @@ onMounted(async () => {
   font-size: 48px;
   opacity: 0.15;
 }
-.card-title { font-weight: 600; }
+.stat-icon-primary { color: var(--ai-primary); }
+.stat-icon-success { color: var(--ai-success); }
+.stat-icon-warning { color: var(--ai-warning); }
+.stat-icon-purple { color: #8b5cf6; }
+.card-title { font-weight: 600; color: var(--ai-text); }
 .welcome { color: var(--ai-text-secondary); line-height: 1.6; }
 .profile { display: flex; gap: 16px; align-items: center; }
 .profile-info { display: flex; flex-direction: column; gap: 4px; }
-.profile-name { font-size: 16px; font-weight: 600; }
+.profile-name { font-size: 16px; font-weight: 600; color: var(--ai-text); }
 .profile-roles { display: flex; gap: 4px; flex-wrap: wrap; }
 .mr { margin-right: 4px; }
 </style>
