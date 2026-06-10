@@ -23,15 +23,19 @@
 
 ### 1.1 当前进度(2026-06-10)
 
-- **Sprint 1 + Sprint 2 + Sprint 3 + Sprint 3.1 全部完成** ✅
+- **Sprint 1 + Sprint 2 + Sprint 3 + Sprint 3.1 + Sprint 4 全部完成** ✅
 - **Sprint 1**:后端 8 模块 + 16 张表 + JWT + 系统管理 + 项目域 + 14 前端页面 (v0.2.0)
 - **Sprint 2**:11 张 AI 表 + LangChain4j + 模型/知识库/提示词/对话 (v0.3.0/v0.3.1)
 - **Sprint 3**:3 Agent 并行,Flow 引擎 + Assistant + 前端 (v0.4.0)
-- **Sprint 3.1**(本轮)技术债清理(2026-06-10 完成,**28/28 E2E PASS**,tag v0.5.1):
-  - **Agent A**:LangChain4j Function Calling(替代 prompt 引导)+ SSE 真流式 + 真实 Embedding API
-  - **Agent B**:Hnswlib 1.2.1 完整集成(替代 in-memory)+ 索引持久化(`ai_vector_index` 表,V7 migration)
-  - **Agent C**:LiteFlow 2.15.0 集成(替代 BFS 简化版)+ `AiFlowRun.costMs` 修复(`Duration.between` 替代 epoch 误用)
-- **Sprint 4 计划**:API Key 池 + Webhook 外部触发 + 部署脚本
+- **Sprint 3.1**:技术债清理(tag v0.5.1)
+  - **Agent A**:LangChain4j Function Calling + SSE 真流式 + 真实 Embedding API
+  - **Agent B**:Hnswlib 1.2.1 完整集成 + 索引持久化(V7 migration)
+  - **Agent C**:LiteFlow 2.15.0 集成 + `AiFlowRun.costMs` 修复
+- **Sprint 4**(本轮,2026-06-10 完成,**28/28 回归 + 新功能验证**,tag v0.6.0):
+  - **Agent A**:API Key 池(CRUD + 鉴权 + 限流 + 外部 API 端点)
+  - **Agent B**:Webhook 外部触发(CRUD + HMAC 验签 + 异步重试 + 投递日志)
+  - **Agent C**:部署脚本(deploy/backup/restore/upgrade)+ JMeter 压测 + 用户手册
+- **Sprint 5 计划**(待规划):鉴权增强(MFA/SSO)、审计日志、可观测性(指标/链路追踪)、CI/CD 流水线
 
 ---
 
