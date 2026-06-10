@@ -62,7 +62,11 @@
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-if="!runsLoading && runs.length === 0" :description="t('flow.detail.runsEmpty')" />
+        <el-empty v-if="!runsLoading && runs.length === 0" :description="t('flow.detail.runsEmpty')">
+          <el-button type="primary" size="small" @click="onRunNow">
+            {{ t('flow.detail.runNow') }}
+          </el-button>
+        </el-empty>
 
         <el-drawer v-model="runDrawer" :title="t('flow.detail.runDetailTitle', { id: currentRun?.id })" direction="rtl" size="60%">
           <div v-if="currentRun" class="run-detail">
@@ -127,7 +131,11 @@
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-if="!triggersLoading && triggers.length === 0" :description="t('flow.detail.triggersEmpty')" />
+        <el-empty v-if="!triggersLoading && triggers.length === 0" :description="t('flow.detail.triggersEmpty')">
+          <el-button type="primary" :icon="Plus" size="small" @click="onAddTrigger">
+            {{ t('flow.detail.newTrigger') }}
+          </el-button>
+        </el-empty>
 
         <el-dialog v-model="triggerDialogVisible" :title="t('flow.detail.newTriggerTitle')" width="480px">
           <el-form :model="triggerForm" label-width="100px">
@@ -186,7 +194,11 @@
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-if="!versionsLoading && versions.length === 0" :description="t('flow.detail.versionsEmpty')" />
+        <el-empty v-if="!versionsLoading && versions.length === 0" :description="t('flow.detail.versionsEmpty')">
+          <el-button type="primary" size="small" @click="$router.push(`/flow/${id}/editor`)">
+            {{ t('flow.detail.editFlow') }}
+          </el-button>
+        </el-empty>
 
         <el-drawer v-model="compareDrawer" :title="t('flow.detail.compareTitle', { v: compareSource?.version || '' })" direction="rtl" size="55%">
           <div v-if="compareSource" class="compare-pane">

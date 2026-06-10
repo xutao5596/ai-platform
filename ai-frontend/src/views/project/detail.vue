@@ -59,7 +59,11 @@
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-if="!flowLoading && flows.length === 0" :description="t('project.detail.flowEmpty')" />
+        <el-empty v-if="!flowLoading && flows.length === 0" :description="t('project.detail.flowEmpty')">
+          <el-button type="primary" :icon="Plus" size="small" @click="onCreateFlow">
+            {{ t('project.detail.createFlow') }}
+          </el-button>
+        </el-empty>
       </el-tab-pane>
 
       <el-tab-pane :label="t('project.detail.tabKnowledge')" name="knowledge">
@@ -82,7 +86,11 @@
           </el-table-column>
           <el-table-column :label="t('project.detail.colCreateTime')" prop="createTime" width="180" />
         </el-table>
-        <el-empty v-if="!kbLoading && knowledgeList.length === 0" :description="t('project.detail.kbEmpty')" />
+        <el-empty v-if="!kbLoading && knowledgeList.length === 0" :description="t('project.detail.kbEmpty')">
+          <el-button type="primary" :icon="Plus" size="small" @click="kbDialogVisible = true">
+            {{ t('project.detail.createKb') }}
+          </el-button>
+        </el-empty>
 
         <el-dialog v-model="kbDialogVisible" :title="t('project.detail.createKbTitle')" width="480px">
           <el-form ref="kbFormRef" :model="kbForm" :rules="kbRules" label-width="90px">
@@ -127,7 +135,11 @@
           </el-table-column>
           <el-table-column :label="t('project.detail.colCreateTime')" prop="createTime" width="180" />
         </el-table>
-        <el-empty v-if="!assistantLoading && assistants.length === 0" :description="t('project.detail.assistantEmpty')" />
+        <el-empty v-if="!assistantLoading && assistants.length === 0" :description="t('project.detail.assistantEmpty')">
+          <el-button type="primary" :icon="Plus" size="small" @click="assistantDialogVisible = true">
+            {{ t('project.detail.createAssistant') }}
+          </el-button>
+        </el-empty>
 
         <el-dialog v-model="assistantDialogVisible" :title="t('project.detail.createAssistantTitle')" width="520px">
           <el-form ref="assistantFormRef" :model="assistantForm" :rules="assistantRules" label-width="100px">
