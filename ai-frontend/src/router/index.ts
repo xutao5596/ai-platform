@@ -20,6 +20,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'project', component: () => import('@/views/project/list.vue'), meta: { title: '我的项目', icon: 'Folder' } },
       { path: 'project/:id', component: () => import('@/views/project/detail.vue'), meta: { title: '项目详情', hidden: true } },
       { path: 'project/:id/members', component: () => import('@/views/project/members.vue'), meta: { title: '项目成员', hidden: true } },
+      { path: 'project/:id/apikeys', component: () => import('@/views/project/apikeys.vue'), meta: { title: 'API Key 管理', hidden: true } },
       { path: 'ai/model', component: () => import('@/views/ai/model.vue'), meta: { title: '模型管理', icon: 'MagicStick' } },
       { path: 'ai/mcp', component: () => import('@/views/ai/mcp.vue'), meta: { title: 'MCP 服务', icon: 'Connection' } },
       { path: 'ai/knowledge', component: () => import('@/views/ai/knowledge.vue'), meta: { title: '知识库', icon: 'Reading' } },

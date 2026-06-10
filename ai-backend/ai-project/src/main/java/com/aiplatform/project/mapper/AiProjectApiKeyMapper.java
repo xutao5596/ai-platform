@@ -6,4 +6,6 @@ import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
 public interface AiProjectApiKeyMapper extends BaseMapper<AiProjectApiKey> {
+
+    AiProjectApiKey selectByApiKey(String apiKey);
 }
