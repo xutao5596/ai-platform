@@ -406,7 +406,10 @@ export default {
       inputPlaceholder: 'Type a message — Enter to send, Shift+Enter for newline',
       deleteConfirm: 'Delete session [{title}]?',
       removed: 'Deleted',
-      sendFailed: 'Send failed'
+      sendFailed: 'Send failed',
+      stop: 'Stop',
+      stopped: 'Stopped',
+      regenerate: 'Regenerate'
     },
     mcp: {
       placeholder: 'MCP service management coming in Sprint 2'
@@ -536,10 +539,15 @@ export default {
       back: 'Back',
       loading: 'Loading...',
       dirty: 'Unsaved',
+      autosaved: 'Auto-saved',
       actionRun: 'Run',
       actionLayout: 'Auto Layout',
+      actionUndo: 'Undo',
+      actionRedo: 'Redo',
       actionReload: 'Reload',
       actionSave: 'Save',
+      searchPlaceholder: 'Search node by name / id / text',
+      searchResult: '{count} match(es)',
       selectNode: 'Select a node to view properties',
       propIdLabel: 'Node ID (typeKey)',
       propUnsupported: 'Unsupported control',

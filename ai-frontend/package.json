@@ -15,7 +15,9 @@
     "axios": "^1.7.9",
     "echarts": "^5.5.1",
     "element-plus": "~2.9.1",
+    "highlight.js": "^11.11.1",
     "logicflow": "^1.0.1",
+    "markdown-it": "^14.2.0",
     "nprogress": "^0.2.0",
     "pinia": "^2.3.0",
     "pinia-plugin-persistedstate": "^4.2.0",
@@ -25,6 +27,7 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.10.2",
     "@types/nprogress": "^0.2.3",
     "@vitejs/plugin-vue": "^5.2.1",

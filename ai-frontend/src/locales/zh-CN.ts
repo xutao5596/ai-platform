@@ -406,7 +406,10 @@ export default {
       inputPlaceholder: '输入消息,Enter 发送,Shift+Enter 换行',
       deleteConfirm: '删除会话 [{title}]?',
       removed: '已删除',
-      sendFailed: '发送失败'
+      sendFailed: '发送失败',
+      stop: '停止',
+      stopped: '已停止',
+      regenerate: '重新生成'
     },
     mcp: {
       placeholder: 'Sprint 2 上线 — MCP 服务管理'
@@ -536,10 +539,15 @@ export default {
       back: '返回',
       loading: '加载中...',
       dirty: '未保存',
+      autosaved: '已自动保存',
       actionRun: '运行',
       actionLayout: '整理布局',
+      actionUndo: '撤销',
+      actionRedo: '重做',
       actionReload: '重载',
       actionSave: '保存',
+      searchPlaceholder: '按名称 / id / 文案搜索节点',
+      searchResult: '匹配 {count} 个',
       selectNode: '选中节点查看属性',
       propIdLabel: '节点 ID (typeKey)',
       propUnsupported: '不支持的控件',

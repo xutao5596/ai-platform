@@ -7,9 +7,23 @@
       <el-divider direction="vertical" />
       <span class="flow-name">{{ flow?.name || t('flow.editor.loading') }}</span>
       <el-tag v-if="dirty" type="warning" size="small">{{ t('flow.editor.dirty') }}</el-tag>
+      <el-tag v-else-if="lastSavedAt" type="success" size="small">{{ t('flow.editor.autosaved') }}</el-tag>
+      <div class="toolbar-middle">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="t('flow.editor.searchPlaceholder')"
+          clearable
+          size="small"
+          style="width: 200px"
+          :prefix-icon="Search"
+        />
+        <span v-if="searchKeyword" class="search-result">{{ t('flow.editor.searchResult', { count: matchCount }) }}</span>
+      </div>
       <div class="toolbar-right">
         <el-button :icon="VideoPlay" :loading="running" @click="onRun">{{ t('flow.editor.actionRun') }}</el-button>
         <el-button :icon="Position" @click="onAutoLayout">{{ t('flow.editor.actionLayout') }}</el-button>
+        <el-button :icon="RefreshLeft" :disabled="!canUndo" @click="onUndo">{{ t('flow.editor.actionUndo') }}</el-button>
+        <el-button :icon="RefreshRight" :disabled="!canRedo" @click="onRedo">{{ t('flow.editor.actionRedo') }}</el-button>
         <el-button :icon="Refresh" @click="onReload">{{ t('flow.editor.actionReload') }}</el-button>
         <el-button type="primary" :icon="Document" :loading="saving" @click="onSave">{{ t('flow.editor.actionSave') }}</el-button>
       </div>
@@ -86,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, shallowRef } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -102,7 +116,10 @@ import {
   Cpu,
   Share,
   Connection,
-  Operation
+  Operation,
+  Search,
+  RefreshLeft,
+  RefreshRight
 } from '@element-plus/icons-vue'
 import LogicFlow from '@logicflow/core'
 import '@logicflow/core/dist/index.css'
@@ -123,15 +140,23 @@ const saving = ref(false)
 const running = ref(false)
 const dirty = ref(false)
 const loadingDefs = ref(false)
+const lastSavedAt = ref<number | null>(null)
 const nodeDefs = ref<NodeDefinition[]>([])
 const selection = ref<{
   nodeId: string
   typeKey: string
   properties: Record<string, any>
 } | null>(null)
+const searchKeyword = ref('')
+const matchCount = ref(0)
+const canUndo = ref(false)
+const canRedo = ref(false)
 
 const canvasContainerRef = ref<HTMLElement | null>(null)
 const lfRef = shallowRef<LogicFlow | null>(null)
+
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+let initialLoaded = false
 
 const categories = [
   { key: 'basic' as const, labelKey: 'flow.editor.categoryBasic', icon: Cpu },
@@ -193,11 +218,6 @@ function resolveBindings(p: Property): Record<string, any> {
   if (p.type === 'number') {
     b.min = 0
   }
-  if (p.type === 'select' || p.type === 'model' || p.type === 'kb' || p.type === 'prompt' || p.type === 'mcp') {
-    if (p.type === 'select' && p.options) {
-      // render manually below
-    }
-  }
   return b
 }
 
@@ -224,6 +244,32 @@ function buildLfOptions() {
     background: { backgroundColor: '#fafbfc' },
     keyboard: { enabled: true }
   }
+}
+
+function applyNodeHighlights() {
+  const lf = lfRef.value
+  if (!lf) return
+  const kw = searchKeyword.value.trim().toLowerCase()
+  const nodes = lf.graphModel.nodes
+  matchCount.value = 0
+  for (const node of nodes) {
+    if (!kw) {
+      node.setProperty('_highlight', false)
+      continue
+    }
+    const def = nodeDefs.value.find(n => n.typeKey === (node as any).type)
+    const displayName = (def?.displayName || (node as any).type || '').toLowerCase()
+    const id = (node.id || '').toLowerCase()
+    const text = ((node as any).text?.value || (typeof (node as any).text === 'string' ? (node as any).text : '') || '').toLowerCase()
+    const hit = displayName.includes(kw) || id.includes(kw) || text.includes(kw)
+    node.setProperty('_highlight', hit)
+    if (hit) matchCount.value++
+  }
+}
+
+function onPropertyChange() {
+  if (!lfRef.value) return
+  applyNodeHighlights()
 }
 
 function initLogicFlow(initialData?: any) {
@@ -270,10 +316,13 @@ function initLogicFlow(initialData?: any) {
       dirty.value = true
       flowStore.markDirty()
     }
+    updateHistoryButtons()
+    applyNodeHighlights()
+    scheduleAutoSave()
   })
 
-  lf.on('node:drag', () => { dirty.value = true })
-  lf.on('edge:add', () => { dirty.value = true })
+  lf.on('node:drag', () => { dirty.value = true; scheduleAutoSave() })
+  lf.on('edge:add', () => { dirty.value = true; scheduleAutoSave() })
 
   const empty = { nodes: [], edges: [] }
   if (initialData && initialData.nodes && initialData.nodes.length > 0) {
@@ -281,6 +330,8 @@ function initLogicFlow(initialData?: any) {
   } else {
     lf.render(empty)
   }
+  updateHistoryButtons()
+  applyNodeHighlights()
 }
 
 function defaultFor(p: Property): any {
@@ -290,6 +341,40 @@ function defaultFor(p: Property): any {
     case 'json': return '{}'
     default: return ''
   }
+}
+
+function updateHistoryButtons() {
+  if (!lfRef.value) {
+    canUndo.value = false
+    canRedo.value = false
+    return
+  }
+  const h: any = (lfRef.value as any).history
+  if (!h) {
+    canUndo.value = false
+    canRedo.value = false
+    return
+  }
+  canUndo.value = !!(h.undoAble && h.undoAble())
+  canRedo.value = !!(h.redoAble && h.redoAble())
+}
+
+function onUndo() {
+  if (!lfRef.value) return
+  ;(lfRef.value as any).undo()
+  updateHistoryButtons()
+  applyNodeHighlights()
+  dirty.value = true
+  flowStore.markDirty()
+}
+
+function onRedo() {
+  if (!lfRef.value) return
+  ;(lfRef.value as any).redo()
+  updateHistoryButtons()
+  applyNodeHighlights()
+  dirty.value = true
+  flowStore.markDirty()
 }
 
 function onDragStart(ev: MouseEvent, n: NodeDefinition) {
@@ -304,22 +389,28 @@ function onDragStart(ev: MouseEvent, n: NodeDefinition) {
   })
 }
 
+async function persist(design: any) {
+  if (!flow.value) return
+  await flowApi.update({
+    id: flowId,
+    projectId: flow.value.projectId || 0,
+    name: flow.value.name || '',
+    description: flow.value.description,
+    isAssistant: flow.value.isAssistant,
+    status: flow.value.status,
+    design
+  })
+}
+
 async function onSave() {
   if (!lfRef.value) return
   saving.value = true
   try {
     const data = lfRef.value.getGraphData()
     const design = JSON.parse(JSON.stringify(data))
-    await flowApi.update({
-      id: flowId,
-      projectId: flow.value?.projectId || 0,
-      name: flow.value?.name || '',
-      description: flow.value?.description,
-      isAssistant: flow.value?.isAssistant,
-      status: flow.value?.status,
-      design
-    })
+    await persist(design)
     dirty.value = false
+    lastSavedAt.value = Date.now()
     flowStore.markClean()
     ElMessage.success(t('common.save'))
   } catch {
@@ -329,11 +420,33 @@ async function onSave() {
   }
 }
 
+function scheduleAutoSave() {
+  if (!initialLoaded) return
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  autosaveTimer = setTimeout(async () => {
+    if (!lfRef.value || !dirty.value) return
+    try {
+      const data = lfRef.value.getGraphData()
+      const design = JSON.parse(JSON.stringify(data))
+      await persist(design)
+      dirty.value = false
+      lastSavedAt.value = Date.now()
+      flowStore.markClean()
+    } catch (e) {
+      // keep dirty so user can retry manually
+    }
+  }, 3000)
+}
+
 async function onReload() {
   if (dirty.value) {
     await ElMessageBox.confirm(t('flow.editor.reloadConfirm'), t('common.confirm'), { type: 'warning' })
       .catch(() => null)
       .then(r => { if (!r) throw new Error('cancel') })
+  }
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer)
+    autosaveTimer = null
   }
   await loadFlow()
   initLogicFlow(flow.value?.design)
@@ -379,14 +492,48 @@ function onDeleteNode() {
   dirty.value = true
 }
 
+function onKeydown(e: KeyboardEvent) {
+  const isCtrl = e.ctrlKey || e.metaKey
+  if (!isCtrl) return
+  const key = e.key.toLowerCase()
+  if (key === 'z' && !e.shiftKey) {
+    e.preventDefault()
+    onUndo()
+  } else if ((key === 'z' && e.shiftKey) || key === 'y') {
+    e.preventDefault()
+    onRedo()
+  }
+}
+
+watch(searchKeyword, () => {
+  applyNodeHighlights()
+})
+
+watch(selection, () => {
+  if (selection.value && lfRef.value) {
+    const lf = lfRef.value as any
+    const node = lf.getNodeModelById?.(selection.value.nodeId)
+    if (node && typeof node.setProperty === 'function') {
+      // re-apply property changes to node properties (only for ones user edited)
+    }
+  }
+}, { deep: true })
+
 onMounted(async () => {
+  window.addEventListener('keydown', onKeydown)
   await loadNodeDefs()
   await loadFlow()
   await nextTick()
   initLogicFlow(flow.value?.design)
+  initialLoaded = true
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer)
+    autosaveTimer = null
+  }
   if (lfRef.value) {
     lfRef.value.destroy()
     lfRef.value = null
@@ -410,6 +557,11 @@ onBeforeUnmount(() => {
   background: #fff;
 }
 .flow-name { font-weight: 600; font-size: 15px; }
+.toolbar-middle {
+  display: flex; align-items: center; gap: 8px;
+  margin-left: 16px;
+}
+.search-result { font-size: 12px; color: var(--ai-text-secondary); }
 .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
 .editor-body { flex: 1; display: flex; min-height: 0; }
 
@@ -444,6 +596,15 @@ onBeforeUnmount(() => {
 }
 
 .canvas-wrapper { flex: 1; min-width: 0; }
+.canvas-wrapper :deep(.lf-node) {
+  transition: filter 0.15s, stroke-width 0.15s;
+}
+.canvas-wrapper :deep(.lf-node[data-highlight="true"]) {
+  filter: drop-shadow(0 0 4px #409eff) drop-shadow(0 0 2px #409eff);
+}
+.canvas-wrapper :deep(.lf-node[data-highlight="false"]) {
+  opacity: 0.45;
+}
 
 .prop-panel {
   width: 320px; flex-shrink: 0;
