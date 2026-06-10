@@ -7,6 +7,7 @@ import com.aiplatform.common.context.UserContext;
 import com.aiplatform.common.exception.BusinessException;
 import com.aiplatform.common.exception.ErrorCode;
 import com.aiplatform.framework.jwt.JwtTokenProvider;
+import com.aiplatform.framework.observability.BusinessMetrics;
 import com.aiplatform.system.dto.LoginRequest;
 import com.aiplatform.system.dto.LoginResponse;
 import com.aiplatform.system.entity.*;
@@ -38,12 +39,15 @@ public class AuthService {
                 .eq(SysUser::getUsername, req.getUsername())
                 .last("LIMIT 1"));
         if (user == null) {
+            BusinessMetrics.login("failure");
             throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
         if (!PasswordUtil.matches(req.getPassword(), user.getPassword())) {
+            BusinessMetrics.login("failure");
             throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
         if (Integer.valueOf(0).equals(user.getStatus())) {
+            BusinessMetrics.login("disabled");
             throw new BusinessException(ErrorCode.USER_DISABLED);
         }
         LoginUser loginUser = buildLoginUser(user);
@@ -63,6 +67,7 @@ public class AuthService {
         resp.setRefreshToken(refresh);
         resp.setExpiresIn(jwtTokenProvider.getAccessTtlSeconds());
         resp.setUser(toUserInfo(loginUser));
+        BusinessMetrics.login("success");
         return resp;
     }
 

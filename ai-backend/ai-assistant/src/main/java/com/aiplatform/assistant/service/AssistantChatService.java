@@ -16,6 +16,7 @@ import com.aiplatform.assistant.tools.ToolContext;
 import com.aiplatform.assistant.tools.ToolRegistry;
 import com.aiplatform.assistant.tools.ToolResult;
 import com.aiplatform.common.context.UserContext;
+import com.aiplatform.framework.observability.BusinessMetrics;
 import com.aiplatform.common.exception.BusinessException;
 import com.aiplatform.common.exception.ErrorCode;
 import com.aiplatform.common.util.JsonUtils;
@@ -70,6 +71,18 @@ public class AssistantChatService {
         if (req.getMessage() == null || req.getMessage().isBlank()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "message 不能为空");
         }
+        try {
+            ChatOutcome outcome = doChat(config, sessionId, req);
+            BusinessMetrics.assistantChat(assistantId, "success");
+            return outcome;
+        } catch (Throwable t) {
+            BusinessMetrics.assistantChat(assistantId, "failed");
+            throw t;
+        }
+    }
+
+    private ChatOutcome doChat(AiAssistantConfig config, Long sessionId, AssistantChatRequest req) {
+        Long assistantId = config.getId();
         AiAssistantSession session = sessionMapper.selectById(sessionId);
         saveUserMessage(sessionId, req.getMessage());
 

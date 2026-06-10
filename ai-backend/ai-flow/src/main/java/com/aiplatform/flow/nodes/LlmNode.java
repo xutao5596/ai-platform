@@ -6,6 +6,7 @@ import com.aiplatform.flow.spi.NodeContext;
 import com.aiplatform.flow.spi.NodeExecuteResult;
 import com.aiplatform.flow.spi.NodeSchema;
 import com.aiplatform.flow.spi.Property;
+import com.aiplatform.framework.observability.BusinessMetrics;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.core.NodeComponent;
 import lombok.RequiredArgsConstructor;
@@ -110,9 +111,11 @@ public class LlmNode extends NodeComponent implements FlowNode {
             out.put("inputTokens", result.inputTokens());
             out.put("outputTokens", result.outputTokens());
             out.put(outputKey, result.content());
+            BusinessMetrics.flowNodeExecute("llm", "success");
             return NodeExecuteResult.success(out);
         } catch (Exception e) {
             log.error("LLM 节点执行失败: modelId={}, error={}", modelId, e.getMessage());
+            BusinessMetrics.flowNodeExecute("llm", "failed");
             return NodeExecuteResult.fail("LLM 调用失败: " + e.getMessage());
         }
     }
