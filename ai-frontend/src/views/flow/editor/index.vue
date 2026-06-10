@@ -126,6 +126,7 @@ import '@logicflow/core/dist/index.css'
 import { MiniMap } from '@logicflow/extension'
 import '@logicflow/extension/dist/index.css'
 import { flowApi, nodeDefApi, runApi } from '@/api/flow'
+import { buildNodeViewModel } from '@/components/FlowEditor/nodeFactory'
 import { useFlowStore } from '@/store/modules/flow'
 import type { FlowVO, NodeDefinition, Property } from '@/types/flow'
 
@@ -185,7 +186,8 @@ const selectionDisplayName = computed(() => {
 const selectionProperties = computed<Property[]>(() => {
   if (!selection.value) return []
   const def = nodeDefs.value.find(n => n.typeKey === selection.value!.typeKey)
-  return def?.inputs || []
+  if (!def) return []
+  return Array.isArray(def.inputs) ? def.inputs : parseInputs(def.inputs as any)
 })
 
 function resolveComponent(p: Property): any {
@@ -281,18 +283,54 @@ function initLogicFlow(initialData?: any) {
   const lf = new LogicFlow(buildLfOptions())
   lf.use(MiniMap)
   lf.setDefaultEdgeType('polyline')
+
+  // Register every node type from backend definitions (Jeecg-style HTML node)
+  const registered = new Set<string>()
+  for (const def of nodeDefs.value) {
+    if (registered.has(def.typeKey)) continue
+    try {
+      const { Model, View } = buildNodeViewModel(def)
+      lf.register({
+        type: def.typeKey,
+        view: View as any,
+        model: Model as any
+      })
+      registered.add(def.typeKey)
+    } catch (e) {
+      console.warn('[flow-editor] failed to register', def.typeKey, e)
+    }
+  }
+  // Aliases: tolerate legacy type names
+  const aliases: Record<string, string> = { ifelse: 'if_else' }
+  for (const [alias, canonical] of Object.entries(aliases)) {
+    if (registered.has(canonical) && !registered.has(alias)) {
+      const def = nodeDefs.value.find(n => n.typeKey === canonical)
+      if (def) {
+        try {
+          const { Model, View } = buildNodeViewModel({ ...def, typeKey: alias })
+          lf.register({ type: alias, view: View as any, model: Model as any })
+          registered.add(alias)
+        } catch { /* ignore */ }
+      }
+    }
+  }
+
   lfRef.value = lf
 
   lf.on('node:click', ({ data }: any) => {
     const def = nodeDefs.value.find(n => n.typeKey === data.type)
     const properties: Record<string, any> = {}
+    const inputs = def ? (Array.isArray(def.inputs) ? def.inputs : parseInputs(def.inputs)) : []
     if (def) {
-      for (const p of def.inputs) {
+      for (const p of inputs) {
         properties[p.key] = data.properties?.[p.key] ?? p.default ?? defaultFor(p)
       }
     } else {
       Object.assign(properties, data.properties || {})
     }
+    // Stable display label from properties or fallback
+    if (!properties._label) properties._label = data.properties?._label || def?.displayName || data.type
+    if (!properties._sub) properties._sub = data.properties?._sub || def?.description || ''
     selection.value = {
       nodeId: data.id,
       typeKey: data.type,
@@ -324,14 +362,67 @@ function initLogicFlow(initialData?: any) {
   lf.on('node:drag', () => { dirty.value = true; scheduleAutoSave() })
   lf.on('edge:add', () => { dirty.value = true; scheduleAutoSave() })
 
-  const empty = { nodes: [], edges: [] }
-  if (initialData && initialData.nodes && initialData.nodes.length > 0) {
-    lf.render(initialData)
+  // Normalize incoming data: strip system properties & keep _label/_sub on existing nodes
+  const data = normalizeDesignData(initialData, nodeDefs.value)
+  if (data.nodes.length > 0) {
+    lf.render(data)
   } else {
-    lf.render(empty)
+    lf.render({ nodes: [], edges: [] })
   }
   updateHistoryButtons()
   applyNodeHighlights()
+}
+
+function parseInputs(raw: any): Property[] {
+  // Backend sometimes serializes List<Property> via Object.toString ("@{...}")
+  // Frontend fallback: try to parse and recover fields. If still impossible,
+  // return an empty array (generic form will be used).
+  if (Array.isArray(raw)) return raw
+  if (typeof raw !== 'string') return []
+  const out: Property[] = []
+  const re = /@\{([\s\S]*?)\}/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(raw)) !== null) {
+    const body = m[1]
+    const obj: any = {}
+    body.split(/[,;]\s*(?=[a-zA-Z_])/).forEach((kv) => {
+      const idx = kv.indexOf('=')
+      if (idx < 0) return
+      const k = kv.substring(0, idx).trim()
+      let v: any = kv.substring(idx + 1).trim()
+      if (v === 'True' || v === 'true') v = true
+      else if (v === 'False' || v === 'false') v = false
+      else if (/^-?\d+(\.\d+)?$/.test(v)) v = Number(v)
+      else if (v.startsWith('System.') || v.startsWith('[') || v.startsWith('{')) v = v // leave as-is
+      obj[k] = v
+    })
+    if (obj.key) out.push(obj as Property)
+  }
+  return out
+}
+
+function normalizeDesignData(raw: any, defs: NodeDefinition[]) {
+  const empty = { nodes: [] as any[], edges: [] as any[] }
+  if (!raw || typeof raw !== 'object') return empty
+  let nodes: any[] = []
+  let edges: any[] = []
+  if (Array.isArray(raw.nodes)) nodes = raw.nodes
+  if (Array.isArray(raw.edges)) edges = raw.edges
+  if (nodes.length === 0 && typeof raw.nodes === 'string') {
+    try { nodes = JSON.parse(raw.nodes) } catch { nodes = [] }
+  }
+  if (edges.length === 0 && typeof raw.edges === 'string') {
+    try { edges = JSON.parse(raw.edges) } catch { edges = [] }
+  }
+  for (const n of nodes) {
+    const def = defs.find(d => d.typeKey === n.type)
+    if (def) {
+      n.properties = n.properties || {}
+      if (!n.properties._label) n.properties._label = n.text?.value || def.displayName
+      if (!n.properties._sub) n.properties._sub = def.description || ''
+    }
+  }
+  return { nodes, edges }
 }
 
 function defaultFor(p: Property): any {

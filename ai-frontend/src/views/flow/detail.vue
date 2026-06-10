@@ -195,7 +195,7 @@
           </el-table-column>
         </el-table>
         <el-empty v-if="!versionsLoading && versions.length === 0" :description="t('flow.detail.versionsEmpty')">
-          <el-button type="primary" size="small" @click="$router.push(`/flow/${id}/editor`)">
+          <el-button type="primary" size="small" @click="$router.push(`/flow/${flowId}/editor`)">
             {{ t('flow.detail.editFlow') }}
           </el-button>
         </el-empty>
@@ -277,6 +277,24 @@ async function onShowRunDetail(r: FlowRunVO) {
     runDetail.value = { run: r, steps: [] }
   }
   runDrawer.value = true
+}
+
+async function onRunNow() {
+  const { value: inputJson } = await ElMessageBox.prompt(
+    t('flow.editor.runDialogTitle', { name: flow.value?.name || '' }),
+    t('common.run'),
+    { inputPlaceholder: '{"q":"hello"}', inputType: 'textarea' }
+  ).catch(() => ({ value: '{}' }))
+  let input: any
+  try { input = inputJson ? JSON.parse(inputJson) : {} } catch { input = {} }
+  ElMessage.info(t('flow.editor.runStarted', { id: flowId }))
+  try {
+    const run = await runApi.run(flowId, { input })
+    await loadRuns()
+    ElMessage.success(t('flow.editor.runSuccess', { status: run.status, cost: run.costMs ?? 0 }))
+  } catch (e: any) {
+    ElMessage.error(t('flow.editor.runFailed') + ': ' + (e?.message || ''))
+  }
 }
 
 const triggers = ref<FlowTriggerVO[]>([])
