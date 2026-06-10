@@ -123,7 +123,7 @@ import {
 } from '@element-plus/icons-vue'
 import LogicFlow from '@logicflow/core'
 import '@logicflow/core/dist/index.css'
-import { MiniMap } from '@logicflow/extension'
+import MiniMap from '@logicflow/extension/es/components/mini-map'
 import '@logicflow/extension/dist/index.css'
 import { flowApi, nodeDefApi, runApi } from '@/api/flow'
 import { buildNodeViewModel } from '@/components/FlowEditor/nodeFactory'
@@ -244,7 +244,8 @@ function buildLfOptions() {
     container: canvasContainerRef.value as HTMLElement,
     grid: true,
     background: { backgroundColor: '#fafbfc' },
-    keyboard: { enabled: true }
+    keyboard: { enabled: true },
+    plugins: [MiniMap]
   }
 }
 
@@ -281,7 +282,6 @@ function initLogicFlow(initialData?: any) {
     lfRef.value = null
   }
   const lf = new LogicFlow(buildLfOptions())
-  lf.use(MiniMap)
   lf.setDefaultEdgeType('polyline')
 
   // Register every node type from backend definitions (Jeecg-style HTML node)
