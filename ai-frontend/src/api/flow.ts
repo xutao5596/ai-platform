@@ -34,7 +34,7 @@ export const versionApi = {
 export const runApi = {
   run: (id: number, data: { input?: any; async?: boolean }) =>
     post<FlowRunVO>(`/v1/flow/${id}/run`, data),
-  runs: (id: number) => get<FlowRunVO[]>(`/v1/flow/${id}/runs`),
+  runs: (id: number) => get<PageResult<FlowRunVO>>(`/v1/flow/${id}/runs`),
   get: (runId: number) => get<{ run: FlowRunVO; steps: FlowRunStepVO[] }>(`/v1/flow/run/${runId}`),
   testTrigger: (id: number, data: { type: string; config?: any }) =>
     post<{ success: boolean; message?: string }>(`/v1/flow/${id}/trigger/test`, data)

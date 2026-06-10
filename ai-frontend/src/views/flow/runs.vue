@@ -98,7 +98,8 @@ function formatJson(v: any) {
 async function load() {
   loading.value = true
   try {
-    rows.value = await runApi.runs(flowId)
+    const res = await runApi.runs(flowId)
+    rows.value = res.records
   } finally {
     loading.value = false
   }
