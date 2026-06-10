@@ -21,23 +21,17 @@
 
 **AI-Platform** 是一个 **以"项目 (Project)"为顶层容器的 AI 流程自动化编排平台**,项目内可创建多个 AI 助手(复用 Flow 机制)和业务流程;通过拖拽式可视化编辑器构建 AI 流程;支持 5 种触发器;提供多成员协作 4 级权限;部署仅需 JDK + MariaDB + Nginx。
 
-### 1.1 当前进度(2026-06-09)
+### 1.1 当前进度(2026-06-10)
 
-- **Sprint 1 + Sprint 2 + Sprint 3 全部完成** — 混合并行模式 3 Agent 联调成功 ✅
+- **Sprint 1 + Sprint 2 + Sprint 3 + Sprint 3.1 全部完成** ✅
 - **Sprint 1**:后端 8 模块 + 16 张表 + JWT + 系统管理 + 项目域 + 14 前端页面 (v0.2.0)
 - **Sprint 2**:11 张 AI 表 + LangChain4j + 模型/知识库/提示词/对话 (v0.3.0/v0.3.1)
-- **Sprint 3**(本轮):
-  - **Agent A**:ai-flow 后端 — FlowNode SPI + NodeRegistry + 8 节点(start/end/llm/knowledge_search/prompt/if_else/http/set_var) + 5 触发器(manual/cron/webhook/event/chained) + 6 张表 + FlowRunner BFS 执行器
-  - **Agent B**:ai-assistant 后端 — 3 张表 + 8 工具(http/subflow/kb/list_projects/get_project_members/current_time/calculator/code_run) + 事件订阅 + prompt 引导式 tool calling + SSE 流
-  - **Agent C**:前端 LogicFlow 编辑器(三栏布局) + 流程列表/详情/执行历史 + 助手列表(占位 → 已补全)
-  - **联调**:Flow Start→End 跑通 + 8 节点定义 + 8 工具 + Calculator `(1+2)*3^2=27` ✅
-- **tag v0.4.0** 已推送
-- **已知问题(Sprint 3.1 修)**:
-  - tool calling 用 prompt 引导 JSON,生产应换 LangChain4j Function Calling
-  - Hnswlib 1.2.1 完整集成(Sprint 2 PoC 用 in-memory)
-  - FlowRunner 是 BFS 简化版,生产应换 LiteFlow
-  - 流式 token 输出(当前是分块重发)
-  - AiFlowRun.costMs 显示成 epoch 毫秒(误用 Long 字段)
+- **Sprint 3**:3 Agent 并行,Flow 引擎 + Assistant + 前端 (v0.4.0)
+- **Sprint 3.1**(本轮)技术债清理(2026-06-10 完成,**28/28 E2E PASS**,tag v0.5.1):
+  - **Agent A**:LangChain4j Function Calling(替代 prompt 引导)+ SSE 真流式 + 真实 Embedding API
+  - **Agent B**:Hnswlib 1.2.1 完整集成(替代 in-memory)+ 索引持久化(`ai_vector_index` 表,V7 migration)
+  - **Agent C**:LiteFlow 2.15.0 集成(替代 BFS 简化版)+ `AiFlowRun.costMs` 修复(`Duration.between` 替代 epoch 误用)
+- **Sprint 4 计划**:API Key 池 + Webhook 外部触发 + 部署脚本
 
 ---
 
