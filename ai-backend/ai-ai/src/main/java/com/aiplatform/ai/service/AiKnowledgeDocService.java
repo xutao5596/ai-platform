@@ -59,7 +59,8 @@ public class AiKnowledgeDocService {
                     original.replaceAll("[^a-zA-Z0-9._-]", "_");
             Path target = Paths.get(UPLOAD_DIR, String.valueOf(kbId), safe);
             Files.createDirectories(target.getParent());
-            file.transferTo(target.toFile());
+            // 不能用 transferTo 写相对路径(走 Tomcat work dir),用 bytes 自己写
+            Files.write(target, file.getBytes());
             doc.setFilePath(target.toString());
             doc.setStatus("parsing");
             doc.setProgress(20);
@@ -72,9 +73,10 @@ public class AiKnowledgeDocService {
             doc.setParseTime(java.time.LocalDateTime.now());
             docMapper.updateById(doc);
             return doc.getId();
-        } catch (IOException e) {
+        } catch (Exception e) {
+            log.error("Upload failed for kb={}", kbId, e);
             doc.setStatus("failed");
-            doc.setErrorMsg("IO: " + e.getMessage());
+            doc.setErrorMsg("Err: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             docMapper.updateById(doc);
             throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR, "上传失败: " + e.getMessage());
         }
