@@ -3,7 +3,7 @@
     <el-container class="as-container">
       <el-aside :width="showList ? '260px' : '0px'" class="as-aside">
         <div class="as-list">
-          <el-button type="primary" :icon="Plus" class="new-btn" @click="onNew">新建助手</el-button>
+          <el-button type="primary" :icon="Plus" class="new-btn" @click="onNew">{{ t('assistant.new') }}</el-button>
           <div
             v-for="a in assistants"
             :key="a.id"
@@ -24,18 +24,18 @@
           <el-button text @click="showList = !showList">
             <el-icon><Expand v-if="!showList" /><Fold v-else /></el-icon>
           </el-button>
-          <span class="title">{{ current?.name || '选择或创建助手' }}</span>
+          <span class="title">{{ current?.name || t('assistant.selectOrCreate') }}</span>
           <div class="flex-spacer" />
           <el-button v-if="current" text @click="showConfig = !showConfig">
             <el-icon><Setting /></el-icon>
-            配置
+            {{ t('assistant.config') }}
           </el-button>
         </el-header>
 
         <el-main class="as-main">
           <div v-if="!current" class="empty">
             <el-icon size="64" color="#dcdfe6"><ChatDotRound /></el-icon>
-            <p>从左侧选择助手或新建一个开始对话</p>
+            <p>{{ t('assistant.empty') }}</p>
           </div>
           <div v-else class="messages">
             <div v-for="(m, idx) in messages" :key="idx" class="msg" :class="m.role">
@@ -45,8 +45,8 @@
                 <el-avatar v-else :size="32" type="primary">AI</el-avatar>
               </div>
               <div class="content">
-                <pre v-if="m.role === 'tool'">🔧 工具: {{ m.name }}\n{{ m.args }}</pre>
-                <pre v-else-if="m.role === 'tool_result'">📋 结果: {{ m.content }}</pre>
+                <pre v-if="m.role === 'tool'">{{ t('assistant.toolCall', { name: m.name }) }}\n{{ m.args }}</pre>
+                <pre v-else-if="m.role === 'tool_result'">{{ t('assistant.toolResult', { content: m.content }) }}</pre>
                 <pre v-else>{{ m.content }}</pre>
                 <div v-if="m.tokens" class="meta">
                   tokens: {{ m.tokens }} | {{ m.costMs }}ms
@@ -55,7 +55,7 @@
             </div>
             <div v-if="streaming" class="msg assistant streaming">
               <div class="avatar"><el-avatar :size="32" type="primary">AI</el-avatar></div>
-              <div class="content"><pre>{{ streamingContent || '正在思考...' }}</pre></div>
+              <div class="content"><pre>{{ streamingContent || t('assistant.thinking') }}</pre></div>
             </div>
           </div>
         </el-main>
@@ -65,37 +65,37 @@
             v-model="input"
             type="textarea"
             :rows="2"
-            placeholder="输入消息..."
+            :placeholder="t('assistant.inputPlaceholder')"
             @keydown.enter.exact.prevent="onSend"
             :disabled="!current"
           />
           <el-button type="primary" :loading="streaming" :disabled="!current || !input.trim()" @click="onSend">
-            发送
+            {{ t('assistant.send') }}
           </el-button>
         </el-footer>
       </el-container>
 
-      <el-aside v-if="showConfig && current" :width="320" class="config-aside">
+      <el-aside v-if="showConfig && current" :width="'320px'" class="config-aside">
         <div class="config-pane">
-          <h4>{{ current.name }} 配置</h4>
+          <h4>{{ t('assistant.configPane', { name: current.name }) }}</h4>
           <el-descriptions :column="1" border size="small">
-            <el-descriptions-item label="项目">#{{ current.projectId }}</el-descriptions-item>
-            <el-descriptions-item label="模型">#{{ current.modelId }}</el-descriptions-item>
-            <el-descriptions-item label="人设">{{ current.persona || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="知识库">{{ current.kbIds || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="工具">
-              <el-tag v-for="t in parseTools(current.toolsEnabled)" :key="t" size="small" class="m-1">{{ t }}</el-tag>
+            <el-descriptions-item :label="t('assistant.project')">#{{ current.projectId }}</el-descriptions-item>
+            <el-descriptions-item :label="t('assistant.model')">#{{ current.modelId }}</el-descriptions-item>
+            <el-descriptions-item :label="t('assistant.persona')">{{ current.persona || '—' }}</el-descriptions-item>
+            <el-descriptions-item :label="t('assistant.kb')">{{ (current.kbIds ? current.kbIds.join(', ') : '—') }}</el-descriptions-item>
+            <el-descriptions-item :label="t('assistant.tools')">
+              <el-tag v-for="tool in parseTools(current.toolsEnabled)" :key="tool" size="small" class="m-1">{{ tool }}</el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="温度">{{ current.temperature }}</el-descriptions-item>
-            <el-descriptions-item label="状态">
+            <el-descriptions-item :label="t('assistant.temperature')">{{ (current as any).temperature }}</el-descriptions-item>
+            <el-descriptions-item :label="t('assistant.status')">
               <el-tag :type="current.status === 1 ? 'success' : 'info'">
-                {{ current.status === 1 ? '启用' : '禁用' }}
+                {{ current.status === 1 ? t('common.enabled') : t('common.disabled') }}
               </el-tag>
             </el-descriptions-item>
           </el-descriptions>
 
-          <h4 class="mt">事件订阅</h4>
-          <el-button size="small" type="primary" plain @click="onAddEvent">+ 添加事件</el-button>
+          <h4 class="mt">{{ t('assistant.eventSub') }}</h4>
+          <el-button size="small" type="primary" plain @click="onAddEvent">{{ t('assistant.addEvent') }}</el-button>
           <div v-for="ev in events" :key="ev.id" class="event-item">
             <el-tag size="small">{{ ev.eventType }}</el-tag>
             <el-button size="small" text type="danger" @click="onRemoveEvent(ev)">×</el-button>
@@ -109,11 +109,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Plus, ChatDotRound, Setting, Expand, Fold } from '@element-plus/icons-vue'
-import { assistantApi, eventApi, chatApi, type AssistantVO, type AssistantStreamEvent, type AssistantEventSubVO } from '@/api/assistant'
+import { assistantApi, eventApi, chatApi, type AssistantStreamEvent } from '@/api/assistant'
+import type { AssistantVO, AssistantEventVO } from '@/types/assistant'
 import { modelApi, type ModelVO } from '@/api/ai/model'
 import { useUserStore } from '@/store/modules/user'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 
 const assistants = ref<AssistantVO[]>([])
@@ -136,7 +139,7 @@ const input = ref('')
 const streaming = ref(false)
 const streamingContent = ref('')
 
-const events = ref<AssistantEventSubVO[]>([])
+const events = ref<AssistantEventVO[]>([])
 
 async function load() {
   assistants.value = await assistantApi.list(1)
@@ -150,21 +153,22 @@ async function select(a: AssistantVO) {
   events.value = await eventApi.list(a.id)
 }
 
-function parseTools(s?: string): string[] {
+function parseTools(s?: string | string[]): string[] {
   if (!s) return []
+  if (Array.isArray(s)) return s
   try { return JSON.parse(s) } catch { return s.split(',') }
 }
 
 function onNew() {
-  ElMessageBox.prompt('给助手起个名字', '新建助手', { inputValue: '新助手' })
+  ElMessageBox.prompt(t('assistant.newDialogPlaceholder'), t('assistant.newDialogTitle'), { inputValue: t('assistant.newDefaultName') })
     .then(async ({ value }) => {
-      const r = await assistantApi.create({
-        projectId: 1, name: value, persona: '你是一个智能助手', modelId: models.value[0]?.id || 1
+      const newId = await assistantApi.create({
+        projectId: 1, name: value, persona: t('assistant.newDefaultPersona'), modelId: models.value[0]?.id || 1
       } as any)
       await load()
-      const a = assistants.value.find(x => x.id === r.data)
+      const a = assistants.value.find(x => x.id === newId)
       if (a) await select(a)
-      ElMessage.success('已创建')
+      ElMessage.success(t('assistant.created'))
     }).catch(() => {})
 }
 
@@ -208,7 +212,7 @@ async function onSend() {
       }
     }
   } catch (e: any) {
-    ElMessage.error('发送失败: ' + (e?.message || ''))
+    ElMessage.error(t('assistant.sendFailed', { msg: e?.message || '' }))
   } finally {
     streaming.value = false
     streamingContent.value = ''
@@ -219,12 +223,12 @@ async function onSend() {
 
 function handleEvent(evt: AssistantStreamEvent) {
   if (evt.type === 'content') {
-    streamingContent.value += evt.data || ''
+    streamingContent.value += evt.chunk || ''
   } else if (evt.type === 'tool_call') {
     messages.value.push({ role: 'tool', name: evt.name, args: JSON.stringify(evt.args) })
     scrollBottom()
   } else if (evt.type === 'tool_result') {
-    messages.value.push({ role: 'tool_result', content: evt.result || '' })
+    messages.value.push({ role: 'tool_result', content: typeof evt.result === 'string' ? evt.result : JSON.stringify(evt.result) })
     scrollBottom()
   } else if (evt.type === 'done') {
     if (streamingContent.value) {
@@ -245,13 +249,13 @@ function scrollBottom() {
 
 async function onAddEvent() {
   if (!current.value) return
-  const { value } = await ElMessageBox.prompt('事件类型 (如 flow.run.failed)', '添加事件订阅', { inputValue: 'flow.run.failed' })
+  const { value } = await ElMessageBox.prompt(t('assistant.addEventTip'), t('assistant.addEventTitle'), { inputValue: t('assistant.addEventDefault') })
   await eventApi.create(current.value.id, { eventType: value, enabled: 1 } as any)
   events.value = await eventApi.list(current.value.id)
-  ElMessage.success('已订阅')
+  ElMessage.success(t('assistant.added'))
 }
 
-async function onRemoveEvent(ev: AssistantEventSubVO) {
+async function onRemoveEvent(ev: AssistantEventVO) {
   await eventApi.remove(current.value!.id, ev.id)
   events.value = await eventApi.list(current.value!.id)
 }

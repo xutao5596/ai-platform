@@ -1,52 +1,35 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <span class="page-title">操作日志</span>
-      <el-button type="danger" :icon="Delete" @click="onClear">清空</el-button>
+      <span class="page-title">{{ t('system.log.title') }}</span>
+      <el-button type="danger" :icon="Delete" @click="onClear">{{ t('system.log.clear') }}</el-button>
     </div>
 
     <div class="toolbar">
-      <el-input v-model="query.module" placeholder="模块 (project / user ...)" clearable style="width: 160px" @keyup.enter="reload" />
-      <el-input v-model="query.username" placeholder="用户名" clearable style="width: 160px" @keyup.enter="reload" />
-      <el-select v-model="query.status" placeholder="状态" clearable style="width: 120px">
-        <el-option :value="1" label="成功" />
-        <el-option :value="0" label="失败" />
-      </el-select>
-      <el-date-picker
-        v-model="timeRange"
-        type="datetimerange"
-        range-separator="-"
-        start-placeholder="开始时间"
-        end-placeholder="结束时间"
-        value-format="YYYY-MM-DDTHH:mm:ss"
-        style="width: 360px"
-      />
-      <el-button type="primary" @click="reload">查询</el-button>
-      <el-button @click="reset">重置</el-button>
+      <el-input v-model="query.keyword" :placeholder="t('system.log.searchUsername')" clearable @keyup.enter="reload" />
+      <el-input v-model="query.module" :placeholder="t('system.log.searchModule')" clearable />
+      <el-button type="primary" @click="reload">{{ t('common.search') }}</el-button>
     </div>
 
     <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="module" label="模块" width="120" />
-      <el-table-column prop="action" label="操作" width="140" />
-      <el-table-column prop="requestMethod" label="方法" width="80" />
-      <el-table-column prop="requestUrl" label="URL" show-overflow-tooltip />
-      <el-table-column prop="username" label="用户" width="120" />
-      <el-table-column prop="ip" label="IP" width="140" />
-      <el-table-column prop="costMs" label="耗时(ms)" width="100" />
-      <el-table-column label="状态" width="80">
+      <el-table-column :label="t('common.id')" prop="id" width="80" />
+      <el-table-column :label="t('system.log.colModule')" prop="module" width="120" />
+      <el-table-column :label="t('system.log.colAction')" prop="action" width="140" />
+      <el-table-column :label="t('system.log.colMethod')" prop="requestMethod" width="80" />
+      <el-table-column :label="t('system.log.colUrl')" prop="requestUrl" />
+      <el-table-column :label="t('system.log.colUser')" prop="username" width="120" />
+      <el-table-column :label="t('system.log.colIp')" prop="ip" width="140" />
+      <el-table-column :label="t('system.log.colCost')" prop="costMs" width="100" />
+      <el-table-column :label="t('common.status')" width="80">
+>>>>>>> feature/sprint5-e-i18n
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-            {{ row.status === 1 ? '成功' : '失败' }}
+            {{ row.status === 1 ? t('system.log.statusSuccess') : t('system.log.statusFailed') }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="时间" width="180" />
-      <el-table-column label="操作" width="100" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" link type="primary" @click="onDetail(row)">详情</el-button>
-        </template>
-      </el-table-column>
+      <el-table-column :label="t('system.log.colTime')" prop="createTime" width="180" />
+>>>>>>> feature/sprint5-e-i18n
     </el-table>
 
     <el-pagination
@@ -97,8 +80,11 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Delete } from '@element-plus/icons-vue'
 import { logApi, type LogVO } from '@/api/system/log'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const rows = ref<LogVO[]>([])
@@ -161,9 +147,10 @@ function reset() {
 }
 
 async function onClear() {
-  await ElMessageBox.confirm('确定清空所有审计日志?', '确认', { type: 'warning' })
+  await ElMessageBox.confirm(t('system.log.clearConfirm'), t('common.confirm'), { type: 'warning' })
+>>>>>>> feature/sprint5-e-i18n
   await logApi.clear()
-  ElMessage.success('已清空')
+  ElMessage.success(t('system.log.cleared'))
   reload()
 }
 

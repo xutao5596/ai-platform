@@ -29,11 +29,25 @@
             <el-icon><Expand v-if="appStore.sidebarCollapsed" /><Fold v-else /></el-icon>
           </el-button>
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="route.meta.title">{{ route.meta.title }}</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/dashboard' }">{{ t('nav.home') }}</el-breadcrumb-item>
+            <el-breadcrumb-item v-if="route.meta.titleKey">{{ t(route.meta.titleKey as string) }}</el-breadcrumb-item>
+            <el-breadcrumb-item v-else-if="route.meta.title">{{ route.meta.title }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
         <div class="header-right">
+          <el-dropdown trigger="click" @command="onLangCommand">
+            <span class="lang-trigger">
+              <el-icon><Position /></el-icon>
+              <span class="lang-label">{{ currentLangLabel }}</span>
+              <el-icon><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="zh-CN" :disabled="locale === 'zh-CN'">简体中文</el-dropdown-item>
+                <el-dropdown-item command="en-US" :disabled="locale === 'en-US'">English</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-dropdown @command="onCommand">
             <span class="user-trigger">
               <el-avatar :size="28" :src="userStore.userInfo?.avatar">
@@ -44,8 +58,8 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+                <el-dropdown-item command="profile">{{ t('layout.profile') }}</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>{{ t('layout.logout') }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -65,16 +79,30 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { useAppStore } from '@/store/modules/app'
-import { Cpu, Expand, Fold, ArrowDown } from '@element-plus/icons-vue'
+import { useLocale } from '@/composables/useLocale'
+import type { LocaleKey } from '@/locales'
+import { Cpu, Expand, Fold, ArrowDown, Position } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const appStore = useAppStore()
+const { t } = useI18n()
+const { locale, setLocale } = useLocale()
 
 const activePath = computed(() => route.path)
+
+const currentLangLabel = computed(() => (locale.value === 'en-US' ? 'English' : '简体中文'))
+
+function onLangCommand(cmd: string) {
+  if (cmd === 'zh-CN' || cmd === 'en-US') {
+    setLocale(cmd as LocaleKey)
+  }
+}
 
 const avatarText = computed(() => {
   const n = userStore.userInfo?.realName || userStore.userInfo?.username || '?'
@@ -117,7 +145,7 @@ async function onCommand(cmd: string) {
     await userStore.logout()
     router.push('/login')
   } else if (cmd === 'profile') {
-    ElMessage.info('个人中心 — Sprint 2 完善')
+    ElMessage.info(t('layout.profileTip'))
   }
 }
 
@@ -166,6 +194,12 @@ onMounted(async () => {
 .header-right { display: flex; align-items: center; gap: 16px; }
 .user-trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .user-name { font-size: 14px; }
+.lang-trigger {
+  display: flex; align-items: center; gap: 4px; cursor: pointer;
+  padding: 4px 8px; border-radius: 4px; font-size: 14px;
+}
+.lang-trigger:hover { background: var(--ai-bg); }
+.lang-label { font-size: 13px; }
 
 .main {
   padding: 16px;

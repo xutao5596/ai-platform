@@ -2,112 +2,107 @@
   <div v-loading="loading" class="page-container">
     <div class="page-header">
       <el-button text @click="$router.push(`/project/${id}`)">
-        <el-icon><ArrowLeft /></el-icon> 返回项目
+        <el-icon><ArrowLeft /></el-icon> {{ t('project.webhooks.back') }}
       </el-button>
-      <span class="page-title">Webhook 管理</span>
+      <span class="page-title">{{ t('project.webhooks.title') }}</span>
       <div class="flex-spacer" />
-      <el-button type="primary" :icon="Plus" @click="onCreate">新建 Webhook</el-button>
+      <el-button type="primary" :icon="Plus" @click="onCreate">{{ t('project.webhooks.create') }}</el-button>
     </div>
 
     <el-alert type="info" :closable="false" class="mb">
-      <template #title>接收端点</template>
-      外部系统向 <code>POST /api/v1/webhook/receive/&#123;id&#125;</code> 发送事件,需携带
-      <code>X-Webhook-Signature: sha256=&lt;HMAC-SHA256(secret, body)&gt;</code> 与
-      <code>X-Webhook-Timestamp</code>(5 分钟内有效)。
+      <template #title>{{ t('project.webhooks.alertTitle') }}</template>
+      {{ t('project.webhooks.alertBody', { url: 'POST /api/v1/webhook/receive/{id}', sig: 'X-Webhook-Signature: sha256=<HMAC-SHA256(secret, body)>', ts: 'X-Webhook-Timestamp' }) }}
     </el-alert>
 
     <el-table :data="rows" border stripe>
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="name" label="名称" min-width="140" />
-      <el-table-column prop="url" label="URL" min-width="240" show-overflow-tooltip />
-      <el-table-column label="订阅事件" min-width="200">
+      <el-table-column :label="t('common.id')" prop="id" width="70" />
+      <el-table-column :label="t('project.webhooks.colName')" prop="name" min-width="140" />
+      <el-table-column :label="t('project.webhooks.colUrl')" prop="url" min-width="240" show-overflow-tooltip />
+      <el-table-column :label="t('project.webhooks.colEvents')" min-width="200">
         <template #default="{ row }">
-          <el-tag v-for="e in row.events || []" :key="e" size="small" type="info" class="mr-4">{{ e }}</el-tag>
-          <span v-if="!row.events || row.events.length === 0" class="muted">未订阅</span>
+          <el-tag v-for="e in row.events || []" :key="e" size="small" type="info" class="mr-4">{{ t('webhookEvent.' + e, e) }}</el-tag>
+          <span v-if="!row.events || row.events.length === 0" class="muted">{{ t('project.webhooks.noEvents') }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="100">
+      <el-table-column :label="t('common.status')" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? t('common.enabled') : t('common.disabled') }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="updateTime" label="更新时间" width="180" />
-      <el-table-column label="操作" width="320" fixed="right">
+      <el-table-column :label="t('common.updateTime')" prop="updateTime" width="180" />
+      <el-table-column :label="t('common.action')" width="320" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="onEdit(row)">编辑</el-button>
-          <el-button size="small" @click="onTest(row)">测试</el-button>
-          <el-button size="small" @click="onLogs(row)">日志</el-button>
-          <el-button size="small" type="warning" @click="onResetSecret(row)">重置密钥</el-button>
-          <el-button size="small" type="danger" @click="onRemove(row)">删除</el-button>
+          <el-button size="small" @click="onEdit(row)">{{ t('common.edit') }}</el-button>
+          <el-button size="small" @click="onTest(row)">{{ t('project.webhooks.actionTest') }}</el-button>
+          <el-button size="small" @click="onLogs(row)">{{ t('project.webhooks.actionLogs') }}</el-button>
+          <el-button size="small" type="warning" @click="onResetSecret(row)">{{ t('project.webhooks.actionResetSecret') }}</el-button>
+          <el-button size="small" type="danger" @click="onRemove(row)">{{ t('common.delete') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <!-- 创建 / 编辑 dialog -->
-    <el-dialog v-model="editVisible" :title="form.id ? '编辑 Webhook' : '新建 Webhook'" width="640px">
+    <el-dialog v-model="editVisible" :title="form.id ? t('project.webhooks.editDialogTitleEdit') : t('project.webhooks.editDialogTitleCreate')" width="640px">
       <el-form :model="form" label-width="100px">
-        <el-form-item label="名称" required>
-          <el-input v-model="form.name" placeholder="例如:订单通知" />
+        <el-form-item :label="t('project.webhooks.formName')" required>
+          <el-input v-model="form.name" :placeholder="t('project.webhooks.formNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="URL" required>
-          <el-input v-model="form.url" placeholder="https://example.com/hook" />
+        <el-form-item :label="t('project.webhooks.formUrl')" required>
+          <el-input v-model="form.url" :placeholder="t('project.webhooks.formUrlPlaceholder')" />
         </el-form-item>
-        <el-form-item label="订阅事件">
+        <el-form-item :label="t('project.webhooks.formEvents')">
           <el-checkbox-group v-model="form.events">
-            <el-checkbox v-for="o in WEBHOOK_EVENT_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</el-checkbox>
+            <el-checkbox v-for="o in WEBHOOK_EVENT_OPTIONS" :key="o.value" :value="o.value">{{ t('webhookEvent.' + o.value, o.label) }}</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-        <el-form-item label="状态">
+        <el-form-item :label="t('project.webhooks.formStatus')">
           <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
         </el-form-item>
-        <el-form-item label="描述">
+        <el-form-item :label="t('project.webhooks.formDesc')">
           <el-input v-model="form.description" type="textarea" :rows="2" />
         </el-form-item>
         <el-alert v-if="createdSecret" type="success" :closable="false" class="mb">
-          <template #title>secret 仅此一次显示,请妥善保存</template>
+          <template #title>{{ t('project.webhooks.secretAlertTitle') }}</template>
           <code style="word-break: break-all">{{ createdSecret }}</code>
         </el-alert>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">关闭</el-button>
-        <el-button type="primary" @click="onSave">保存</el-button>
+        <el-button @click="editVisible = false">{{ t('project.webhooks.saveClose') }}</el-button>
+        <el-button type="primary" @click="onSave">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
 
-    <!-- 测试 dialog -->
-    <el-dialog v-model="testVisible" title="发送测试事件" width="500px">
+    <el-dialog v-model="testVisible" :title="t('project.webhooks.testDialogTitle')" width="500px">
       <el-form :model="testForm" label-width="100px">
-        <el-form-item label="事件类型">
+        <el-form-item :label="t('project.webhooks.formEventType')">
           <el-select v-model="testForm.event" style="width: 100%">
-            <el-option v-for="o in WEBHOOK_EVENT_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+            <el-option v-for="o in WEBHOOK_EVENT_OPTIONS" :key="o.value" :value="o.value" :label="t('webhookEvent.' + o.value, o.label)" />
           </el-select>
         </el-form-item>
-        <el-form-item label="附加 payload">
-          <el-input v-model="testPayloadText" type="textarea" :rows="4" placeholder='{"key":"value"} 的 JSON 字符串' />
+        <el-form-item :label="t('project.webhooks.formPayload')">
+          <el-input v-model="testPayloadText" type="textarea" :rows="4" :placeholder="t('project.webhooks.formPayloadPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="testVisible = false">关闭</el-button>
-        <el-button type="primary" :loading="testSending" @click="onSendTest">发送</el-button>
+        <el-button @click="testVisible = false">{{ t('project.webhooks.saveClose') }}</el-button>
+        <el-button type="primary" :loading="testSending" @click="onSendTest">{{ t('project.webhooks.testSend') }}</el-button>
       </template>
     </el-dialog>
 
-    <!-- 日志 dialog -->
-    <el-dialog v-model="logsVisible" title="投递日志" width="900px">
+    <el-dialog v-model="logsVisible" :title="t('project.webhooks.logsDialogTitle')" width="900px">
       <el-table :data="logRows" border stripe size="small" max-height="500">
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="event" label="事件" width="200" />
-        <el-table-column label="状态码" width="90">
+        <el-table-column :label="t('common.id')" prop="id" width="60" />
+        <el-table-column :label="t('project.webhooks.colEvent')" prop="event" width="200" />
+        <el-table-column :label="t('project.webhooks.colStatusCode')" width="90">
           <template #default="{ row }">
             <el-tag :type="row.responseStatus >= 200 && row.responseStatus < 300 ? 'success' : 'danger'">
               {{ row.responseStatus }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="retryCount" label="重试" width="60" />
-        <el-table-column prop="costMs" label="耗时(ms)" width="90" />
-        <el-table-column prop="createTime" label="时间" width="180" />
-        <el-table-column prop="requestUrl" label="URL" min-width="200" show-overflow-tooltip />
+        <el-table-column :label="t('project.webhooks.colRetry')" prop="retryCount" width="60" />
+        <el-table-column :label="t('project.webhooks.colCost')" prop="costMs" width="90" />
+        <el-table-column :label="t('project.webhooks.colTime')" prop="createTime" width="180" />
+        <el-table-column :label="t('project.webhooks.colUrl')" prop="requestUrl" min-width="200" show-overflow-tooltip />
       </el-table>
       <el-pagination
         v-model:current-page="logPage.current"
@@ -125,10 +120,12 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { webhookApi, WEBHOOK_EVENT_OPTIONS, type WebhookVO, type WebhookLog } from '@/api/webhook'
 
 const route = useRoute()
+const { t } = useI18n()
 const id = Number(route.params.id)
 
 const loading = ref(false)
@@ -203,7 +200,7 @@ function onEdit(row: WebhookVO) {
 
 async function onSave() {
   if (!form.name || !form.url) {
-    ElMessage.warning('名称和 URL 不能为空')
+    ElMessage.warning(t('project.webhooks.required'))
     return
   }
   const payload: WebhookVO = {
@@ -215,24 +212,24 @@ async function onSave() {
   }
   if (form.id) {
     await webhookApi.update(id, form.id, payload)
-    ElMessage.success('已更新')
+    ElMessage.success(t('project.webhooks.updated'))
   } else {
     const created = await webhookApi.create(id, payload)
     createdSecret.value = created.secret || ''
-    ElMessage.success(createdSecret.value ? '已创建,secret 已显示' : '已创建')
+    ElMessage.success(createdSecret.value ? t('project.webhooks.createdWithSecret') : t('project.webhooks.created'))
   }
   load()
 }
 
 async function onRemove(row: WebhookVO) {
-  await ElMessageBox.confirm(`确定删除 [${row.name}]?`, '确认', { type: 'warning' })
+  await ElMessageBox.confirm(t('project.webhooks.removeConfirm', { name: row.name }), t('common.confirm'), { type: 'warning' })
   await webhookApi.remove(id, row.id!)
-  ElMessage.success('已删除')
+  ElMessage.success(t('project.webhooks.removed'))
   load()
 }
 
 async function onResetSecret(row: WebhookVO) {
-  await ElMessageBox.confirm(`确定重置 [${row.name}] 的 secret?旧值将立即失效。`, '确认', { type: 'warning' })
+  await ElMessageBox.confirm(t('project.webhooks.resetConfirm', { name: row.name }), t('common.confirm'), { type: 'warning' })
   const updated = await webhookApi.resetSecret(id, row.id!)
   if (updated.secret) {
     resetForm()
@@ -245,7 +242,7 @@ async function onResetSecret(row: WebhookVO) {
     createdSecret.value = updated.secret
     editVisible.value = true
   }
-  ElMessage.success('secret 已重置')
+  ElMessage.success(t('project.webhooks.resetSuccess'))
   load()
 }
 
@@ -264,7 +261,7 @@ async function onSendTest() {
       event: testForm.event,
       payload: testPayload.value
     })
-    ElMessage[res?.ok ? 'success' : 'warning'](res?.message || '已发送')
+    ElMessage[res?.ok ? 'success' : 'warning'](res?.message || t('project.webhooks.created'))
   } finally {
     testSending.value = false
   }

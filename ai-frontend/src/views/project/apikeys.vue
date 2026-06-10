@@ -2,35 +2,35 @@
   <div v-loading="loading" class="page-container">
     <div class="page-header">
       <el-button text @click="$router.push(`/project/${id}`)">
-        <el-icon><ArrowLeft /></el-icon> 返回项目
+        <el-icon><ArrowLeft /></el-icon> {{ t('project.apikeys.back') }}
       </el-button>
-      <span class="page-title">API Key 管理</span>
+      <span class="page-title">{{ t('project.apikeys.title') }}</span>
       <div class="flex-spacer" />
-      <el-button type="primary" :icon="Plus" @click="onCreate">创建 API Key</el-button>
+      <el-button type="primary" :icon="Plus" @click="onCreate">{{ t('project.apikeys.create') }}</el-button>
     </div>
 
     <el-alert
       type="warning"
       :closable="false"
-      title="API Key 用于外部系统调用本项目内的流程/助手,带限流保护。请妥善保管 secret,创建后只显示一次。"
+      :title="t('project.apikeys.alertTitle')"
       show-icon
       class="mb"
     />
 
     <el-table :data="rows" border stripe>
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="名称" min-width="160" />
-      <el-table-column prop="apiKey" label="API Key" min-width="280">
+      <el-table-column :label="t('common.id')" prop="id" width="80" />
+      <el-table-column :label="t('project.apikeys.colName')" prop="name" min-width="160" />
+      <el-table-column :label="t('project.apikeys.colApiKey')" prop="apiKey" min-width="280">
         <template #default="{ row }">
           <code class="mono">{{ row.apiKey }}</code>
         </template>
       </el-table-column>
-      <el-table-column prop="maskedSecret" label="Secret" min-width="200">
+      <el-table-column :label="t('project.apikeys.colSecret')" prop="maskedSecret" min-width="200">
         <template #default="{ row }">
-          <code class="mono">{{ row.maskedSecret || '********' }}</code>
+          <code class="mono">{{ row.maskedSecret || t('project.apikeys.noSecret') }}</code>
         </template>
       </el-table-column>
-      <el-table-column label="Scope" min-width="180">
+      <el-table-column :label="t('project.apikeys.colScopes')" min-width="180">
         <template #default="{ row }">
           <el-tag v-for="s in row.scopes" :key="s" size="small" type="info" class="mr">
             {{ s }}
@@ -38,85 +38,83 @@
           <span v-if="!row.scopes || row.scopes.length === 0" class="muted">-</span>
         </template>
       </el-table-column>
-      <el-table-column prop="rateLimit" label="限流/分钟" width="110" align="center" />
-      <el-table-column label="状态" width="90" align="center">
+      <el-table-column :label="t('project.apikeys.colRateLimit')" prop="rateLimit" width="110" align="center" />
+      <el-table-column :label="t('common.status')" width="90" align="center">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'">
-            {{ row.status === 1 ? '启用' : '禁用' }}
+            {{ row.status === 1 ? t('common.enabled') : t('common.disabled') }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="lastUsedTime" label="最后使用" width="170" />
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column :label="t('project.apikeys.colLastUsed')" prop="lastUsedTime" width="170" />
+      <el-table-column :label="t('common.action')" width="220" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="onEdit(row)">编辑</el-button>
-          <el-button size="small" type="warning" @click="onReset(row)">重置</el-button>
-          <el-button size="small" type="danger" @click="onRemove(row)">删除</el-button>
+          <el-button size="small" @click="onEdit(row)">{{ t('common.edit') }}</el-button>
+          <el-button size="small" type="warning" @click="onReset(row)">{{ t('project.apikeys.actionReset') }}</el-button>
+          <el-button size="small" type="danger" @click="onRemove(row)">{{ t('common.delete') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <!-- Create/Edit dialog -->
     <el-dialog
       v-model="editVisible"
-      :title="editForm.id ? '编辑 API Key' : '创建 API Key'"
+      :title="editForm.id ? t('project.apikeys.editDialogTitleEdit') : t('project.apikeys.editDialogTitleCreate')"
       width="560px"
     >
       <el-form :model="editForm" label-width="100px">
-        <el-form-item label="名称" required>
-          <el-input v-model="editForm.name" placeholder="例如:CRM 集成" />
+        <el-form-item :label="t('project.apikeys.formName')" required>
+          <el-input v-model="editForm.name" :placeholder="t('project.apikeys.formNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="Scope">
+        <el-form-item :label="t('project.apikeys.formScopes')">
           <el-input
             v-model="scopesText"
-            placeholder="逗号分隔,例如: flow:run, assistant:chat(留空=不限制)"
+            :placeholder="t('project.apikeys.formScopesPlaceholder')"
           />
         </el-form-item>
-        <el-form-item label="限流(次/分)">
+        <el-form-item :label="t('project.apikeys.formRateLimit')">
           <el-input-number v-model="editForm.rateLimit" :min="0" :max="100000" />
         </el-form-item>
-        <el-form-item v-if="editForm.id" label="状态">
+        <el-form-item v-if="editForm.id" :label="t('project.apikeys.formStatus')">
           <el-switch
             v-model="editForm.status"
             :active-value="1"
             :inactive-value="0"
-            active-text="启用"
-            inactive-text="禁用"
+            :active-text="t('project.apikeys.formSwitchActive')"
+            :inactive-text="t('project.apikeys.formSwitchInactive')"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="onSave">保存</el-button>
+        <el-button @click="editVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="onSave">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
 
-    <!-- Created/Reset result dialog - shows plaintext secret once -->
-    <el-dialog v-model="revealVisible" title="请保存凭据(只显示一次)" width="640px" :close-on-click-modal="false">
+    <el-dialog v-model="revealVisible" :title="t('project.apikeys.revealDialogTitle')" width="640px" :close-on-click-modal="false">
       <el-alert type="success" :closable="false" show-icon>
-        创建/重置成功,请立即复制以下凭据,关闭后无法再次查看 Secret。
+        {{ t('project.apikeys.revealAlert') }}
       </el-alert>
       <el-form label-width="100px" class="mt">
-        <el-form-item label="API Key">
+        <el-form-item :label="t('project.apikeys.revealApiKey')">
           <el-input v-model="reveal.apiKey" readonly>
             <template #append>
-              <el-button @click="copyText(reveal.apiKey)">复制</el-button>
+              <el-button @click="copyText(reveal.apiKey)">{{ t('common.copy') }}</el-button>
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="API Secret">
+        <el-form-item :label="t('project.apikeys.revealApiSecret')">
           <el-input v-model="reveal.apiSecret" readonly type="password" show-password>
             <template #append>
-              <el-button @click="copyText(reveal.apiSecret)">复制</el-button>
+              <el-button @click="copyText(reveal.apiSecret)">{{ t('common.copy') }}</el-button>
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="调用示例">
+        <el-form-item :label="t('project.apikeys.revealExample')">
           <pre class="example">{{ usageExample }}</pre>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button type="primary" @click="revealVisible = false">我已保存</el-button>
+        <el-button type="primary" @click="revealVisible = false">{{ t('project.apikeys.revealSaved') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -126,10 +124,12 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { apiKeyApi, type ApiKeyVO, type ApiKeySave } from '@/api/apikey'
 
 const route = useRoute()
+const { t } = useI18n()
 const id = Number(route.params.id)
 
 const loading = ref(false)
@@ -179,7 +179,7 @@ async function onEdit(row: ApiKeyVO) {
 
 async function onSave() {
   if (!editForm.name) {
-    ElMessage.warning('请输入名称')
+    ElMessage.warning(t('project.apikeys.nameRequired'))
     return
   }
   const scopes = scopesText.value
@@ -194,7 +194,7 @@ async function onSave() {
   }
   if (editForm.id) {
     const r = await apiKeyApi.update(id, editForm.id, payload)
-    ElMessage.success('已更新')
+    ElMessage.success(t('project.apikeys.updated'))
     editVisible.value = false
     if (r.apiKey && r.apiSecret) {
       Object.assign(reveal, { apiKey: r.apiKey, apiSecret: r.apiSecret })
@@ -202,7 +202,7 @@ async function onSave() {
     }
   } else {
     const r = await apiKeyApi.create(id, payload)
-    ElMessage.success('已创建')
+    ElMessage.success(t('project.apikeys.created'))
     editVisible.value = false
     if (r.apiKey && r.apiSecret) {
       Object.assign(reveal, { apiKey: r.apiKey, apiSecret: r.apiSecret })
@@ -213,11 +213,11 @@ async function onSave() {
 }
 
 async function onReset(row: ApiKeyVO) {
-  await ElMessageBox.confirm(`确定重置 [${row.name}] 的 Secret? 旧 Secret 立即失效。`, '确认', {
+  await ElMessageBox.confirm(t('project.apikeys.resetConfirm', { name: row.name }), t('common.confirm'), {
     type: 'warning'
   })
   const r = await apiKeyApi.reset(id, row.id)
-  ElMessage.success('Secret 已重置')
+  ElMessage.success(t('project.apikeys.resetSuccess'))
   if (r.apiKey && r.apiSecret) {
     Object.assign(reveal, { apiKey: r.apiKey, apiSecret: r.apiSecret })
     revealVisible.value = true
@@ -226,17 +226,17 @@ async function onReset(row: ApiKeyVO) {
 }
 
 async function onRemove(row: ApiKeyVO) {
-  await ElMessageBox.confirm(`确定删除 [${row.name}]? 删除后无法恢复。`, '确认', { type: 'warning' })
+  await ElMessageBox.confirm(t('project.apikeys.removeConfirm', { name: row.name }), t('common.confirm'), { type: 'warning' })
   await apiKeyApi.remove(id, row.id)
-  ElMessage.success('已删除')
+  ElMessage.success(t('project.apikeys.removed'))
   load()
 }
 
 function copyText(text: string) {
   if (!text) return
   navigator.clipboard?.writeText(text).then(
-    () => ElMessage.success('已复制'),
-    () => ElMessage.warning('复制失败,请手动选择')
+    () => ElMessage.success(t('common.copySuccess')),
+    () => ElMessage.warning(t('common.copyFailed'))
   )
 }
 

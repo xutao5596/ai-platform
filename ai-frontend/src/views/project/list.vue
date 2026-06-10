@@ -1,34 +1,34 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <span class="page-title">我的项目</span>
-      <el-button v-if="can('project:create')" type="primary" :icon="Plus" @click="onAdd">新建项目</el-button>
+      <span class="page-title">{{ t('project.list.title') }}</span>
+      <el-button v-if="can('project:create')" type="primary" :icon="Plus" @click="onAdd">{{ t('project.list.add') }}</el-button>
     </div>
 
     <div class="toolbar">
-      <el-input v-model="query.keyword" placeholder="项目名 / 编码" clearable @keyup.enter="reload" />
-      <el-button type="primary" @click="reload">查询</el-button>
+      <el-input v-model="query.keyword" :placeholder="t('project.list.searchPlaceholder')" clearable @keyup.enter="reload" />
+      <el-button type="primary" @click="reload">{{ t('common.search') }}</el-button>
     </div>
 
     <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="name" label="项目名" min-width="200">
+      <el-table-column :label="t('project.list.colName')" min-width="200">
         <template #default="{ row }">
           <el-link type="primary" @click="$router.push(`/project/${row.id}`)">{{ row.name }}</el-link>
         </template>
       </el-table-column>
-      <el-table-column prop="code" label="编码" width="160" />
-      <el-table-column prop="description" label="描述" />
-      <el-table-column label="角色" width="100">
+      <el-table-column :label="t('project.list.colCode')" prop="code" width="160" />
+      <el-table-column :label="t('project.list.colDesc')" prop="description" />
+      <el-table-column :label="t('project.list.colRole')" width="100">
         <template #default="{ row }">
-          <el-tag v-if="row.roleCode" :type="roleTagType(row.roleCode)">{{ roleLabel(row.roleCode) }}</el-tag>
+          <el-tag v-if="row.roleCode" :type="roleTagType(row.roleCode) as any">{{ t('project.role.' + row.roleCode) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="memberCount" label="成员数" width="100" />
-      <el-table-column prop="createTime" label="创建时间" width="180" />
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column :label="t('project.list.colMemberCount')" prop="memberCount" width="100" />
+      <el-table-column :label="t('project.list.colCreateTime')" prop="createTime" width="180" />
+      <el-table-column :label="t('common.action')" width="200" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="$router.push(`/project/${row.id}`)">详情</el-button>
-          <el-button size="small" @click="$router.push(`/project/${row.id}/members`)">成员</el-button>
+          <el-button size="small" @click="$router.push(`/project/${row.id}`)">{{ t('project.list.actionDetail') }}</el-button>
+          <el-button size="small" @click="$router.push(`/project/${row.id}/members`)">{{ t('project.list.actionMembers') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -43,27 +43,29 @@
       @current-change="reload"
     />
 
-    <el-dialog v-model="dialogVisible" title="新建项目" width="500px">
+    <el-dialog v-model="dialogVisible" :title="t('project.list.addDialogTitle')" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="项目名" prop="name"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="编码"><el-input v-model="form.code" /></el-form-item>
-        <el-form-item label="描述"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item :label="t('project.list.formName')" prop="name"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item :label="t('project.list.formCode')"><el-input v-model="form.code" /></el-form-item>
+        <el-form-item :label="t('project.list.formDesc')"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="onSave">创建</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="onSave">{{ t('common.create') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import { projectApi, type ProjectVO, type ProjectSave } from '@/api/project'
 import { useUserStore } from '@/store/modules/user'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const can = (p: string) => userStore.hasPermission(p)
 
@@ -75,7 +77,9 @@ const query = reactive({ current: 1, size: 10, keyword: '' })
 const dialogVisible = ref(false)
 const formRef = ref<FormInstance>()
 const form = reactive<ProjectSave>({ name: '', code: '', description: '' })
-const rules: FormRules = { name: [{ required: true, message: '请输入项目名', trigger: 'blur' }] }
+const rules = computed<FormRules>(() => ({ name: [{ required: true, message: t('project.list.nameRequired'), trigger: 'blur' }] }))
+
+const roleTagType = (c: string) => ({ owner: 'danger', admin: 'warning', developer: 'success', viewer: 'info' }[c] || '')
 
 async function reload() {
   loading.value = true
@@ -98,13 +102,10 @@ async function onSave() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
   await projectApi.create(form)
-  ElMessage.success('已创建')
+  ElMessage.success(t('project.list.created'))
   dialogVisible.value = false
   reload()
 }
-
-const roleLabel = (c: string) => ({ owner: '所有者', admin: '管理员', developer: '开发者', viewer: '观察者' }[c] || c)
-const roleTagType = (c: string) => ({ owner: 'danger', admin: 'warning', developer: 'success', viewer: 'info' }[c] || '')
 
 onMounted(reload)
 </script>
