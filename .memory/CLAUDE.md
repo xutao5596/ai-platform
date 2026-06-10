@@ -737,3 +737,34 @@ PR to main     → CI + PR Check
 - [ ] 启动后端是否正常?端口 8080 是否起来?
 - [ ] E2E 脚本是否 100% 通过?
 - [ ] 是否有未提交的临时文件?`git status --short` 看 untracked
+
+### 15.6 PowerShell 启动进程反模式(2026-06-10 反复踩坑)
+
+**症状**:`Start-Process ... | Select-Object -First 3` 报 "ChildProcess.kill" 错误,看似进程崩了,实际是 PS 跨进程管道偶发失败
+
+**错误示例**:
+```powershell
+Start-Process -FilePath "java" -ArgumentList "-jar",$jar,"--spring.profiles.active=dev" -WorkingDirectory $workDir -RedirectStandardOutput $logPath -WindowStyle Hidden
+Start-Sleep -Seconds 25
+$port = Test-NetConnection -ComputerName localhost -Port 8080 -InformationLevel Quiet 2>&1
+Write-Host "Backend 8080: $port"  # ← 写这句就报 "Unknown: ChildProcess.kill" 错误
+```
+
+**根因**:`Start-Process` 返回 `Process` 对象不是字符串,管道 `| Select-Object` 在某些 PS5.1 + 跨进程场景下抛 ChildProcess.kill 异常,实际进程已正常启动
+
+**正确做法**(分两步,不要 pipe):
+```powershell
+# 1. 启动(Out-Null 吞掉返回值)
+Start-Process -FilePath "java" -ArgumentList "-jar",$jar,"--spring.profiles.active=dev" -WorkingDirectory $workDir -RedirectStandardOutput $logPath -WindowStyle Hidden | Out-Null
+
+# 2. 单独命令查端口(无 pipe)
+Start-Sleep -Seconds 25
+$port = Test-NetConnection -ComputerName localhost -Port 8080 -InformationLevel Quiet 2>&1
+Write-Host "Backend 8080: $port"
+```
+
+**自查清单**(启动后端/前端时):
+- [ ] `Start-Process` 后面 **必须** `| Out-Null` 或独立一行
+- [ ] 不要把 `Start-Process` 和 `Test-NetConnection` 写在同一个脚本块 + 输出管道
+- [ ] 启动后**单独** `Test-NetConnection` 一行,单独 `Write-Host` 报告
+- [ ] 用 `Get-Process java` / `Get-Process node` 单独验证进程存在
