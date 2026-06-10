@@ -21,6 +21,7 @@ export interface LogVO {
 }
 
 export interface LogQuery extends PageQuery {
+  keyword?: string
   module?: string
   action?: string
   username?: string

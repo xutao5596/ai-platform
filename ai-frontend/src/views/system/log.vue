@@ -21,7 +21,7 @@
       <el-table-column :label="t('system.log.colIp')" prop="ip" width="140" />
       <el-table-column :label="t('system.log.colCost')" prop="costMs" width="100" />
       <el-table-column :label="t('common.status')" width="80">
->>>>>>> feature/sprint5-e-i18n
+
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'danger'">
             {{ row.status === 1 ? t('system.log.statusSuccess') : t('system.log.statusFailed') }}
@@ -29,7 +29,7 @@
         </template>
       </el-table-column>
       <el-table-column :label="t('system.log.colTime')" prop="createTime" width="180" />
->>>>>>> feature/sprint5-e-i18n
+
     </el-table>
 
     <el-pagination
@@ -93,6 +93,7 @@ const timeRange = ref<[string, string] | null>(null)
 const query = reactive<{
   current: number
   size: number
+  keyword: string
   module: string
   username: string
   status: number | undefined
@@ -101,6 +102,7 @@ const query = reactive<{
 }>({
   current: 1,
   size: 20,
+  keyword: '',
   module: '',
   username: '',
   status: undefined
@@ -148,7 +150,7 @@ function reset() {
 
 async function onClear() {
   await ElMessageBox.confirm(t('system.log.clearConfirm'), t('common.confirm'), { type: 'warning' })
->>>>>>> feature/sprint5-e-i18n
+
   await logApi.clear()
   ElMessage.success(t('system.log.cleared'))
   reload()
