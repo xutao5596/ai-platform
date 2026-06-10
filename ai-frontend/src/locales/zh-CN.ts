@@ -99,6 +99,9 @@ export default {
     flowCount: '流程数',
     knowledgeCount: '知识库',
     chatToday: 'AI 对话(今日)',
+    errorRate: '错误率',
+    totalFlows: '总流程数',
+    totalAssistants: '总助手数',
     welcomeCard: '欢迎使用 AI Platform',
     quickStart: '快速开始',
     stepCreateProject: '创建项目',
@@ -352,7 +355,20 @@ export default {
       projectIdRequired: '项目 ID 必填',
       saved: '已保存',
       removeConfirm: '确定删除 [{name}]?',
-      removed: '已删除'
+      removed: '已删除',
+      actionUpload: '上传文档',
+      uploadTitle: '上传文档 — {name}',
+      uploadHint: '支持 .pdf .docx .txt .md,单文件最大 20MB',
+      uploadChoose: '选择文件',
+      uploadBtn: '开始上传',
+      uploadSuccess: '上传成功',
+      uploadFailed: '上传失败: {msg}',
+      backendPending: '后端 doc/upload 端点待实现 — 当前为前端 Stub',
+      noDoc: '暂无文档,点击「上传文档」开始',
+      colDocName: '文档名',
+      colDocSize: '大小',
+      colDocStatus: '状态',
+      colDocTime: '上传时间'
     },
     prompt: {
       title: '提示词',
@@ -409,7 +425,32 @@ export default {
       sendFailed: '发送失败'
     },
     mcp: {
-      placeholder: 'Sprint 2 上线 — MCP 服务管理'
+      placeholder: 'Sprint 2 上线 — MCP 服务管理',
+      title: 'MCP 服务',
+      add: '新建 MCP',
+      searchPlaceholder: '名称',
+      colName: '名称',
+      colUrl: 'URL',
+      colType: '类型',
+      colStatus: '状态',
+      colDesc: '描述',
+      colCreateTime: '创建时间',
+      actionEdit: '编辑',
+      actionDelete: '删除',
+      editTitle: '编辑 MCP',
+      addTitle: '新建 MCP',
+      formName: '名称',
+      formUrl: '服务 URL',
+      formType: '类型',
+      formApiKey: 'API Key',
+      formDesc: '描述',
+      formStatus: '状态',
+      nameRequired: '请输入名称',
+      urlRequired: '请输入 URL',
+      saved: '已保存',
+      removeConfirm: '确定删除 [{name}]?',
+      removed: '已删除',
+      backendPending: '后端 AiMcpController 待实现 — 当前为前端 Stub'
     }
   },
   flow: {
@@ -749,7 +790,20 @@ export default {
     }
   },
   monitor: {
-    placeholder: 'Sprint 4 上线 — 全局监控(QPS/P95/错误率/资源)'
+    placeholder: 'Sprint 4 上线 — 全局监控(QPS/P95/错误率/资源)',
+    title: '系统监控',
+    refresh: '刷新',
+    lastUpdate: '最后更新: {time}',
+    statFlow: '总流程数',
+    statAssistant: '总助手数',
+    statChat: '今日对话',
+    statError: '错误率',
+    chartFlowRun: '流程执行量(按小时)',
+    chartLogin: '登录次数(按天)',
+    chartNode: '节点执行分布',
+    chartWebhook: 'Webhook 派发(按状态)',
+    noData: '暂无数据',
+    chatPending: '待后端补 /api/v1/assistant/stats/today'
   },
   assistant: {
     new: '新建助手',

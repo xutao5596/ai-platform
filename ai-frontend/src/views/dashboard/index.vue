@@ -10,22 +10,22 @@
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
-          <div class="stat-label">{{ t('dashboard.flowCount') }}</div>
-          <div class="stat-value">0</div>
+          <div class="stat-label">{{ t('dashboard.totalFlows') }}</div>
+          <div class="stat-value">{{ stats.flowCount }}</div>
           <el-icon class="stat-icon stat-icon-success"><Connection /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
           <div class="stat-label">{{ t('dashboard.knowledgeCount') }}</div>
-          <div class="stat-value">0</div>
+          <div class="stat-value">{{ stats.knowledgeCount }}</div>
           <el-icon class="stat-icon stat-icon-warning"><Reading /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card class="stat-card">
+        <el-card class="stat-card" :title="t('monitor.chatPending')">
           <div class="stat-label">{{ t('dashboard.chatToday') }}</div>
-          <div class="stat-value">0</div>
+          <div class="stat-value">{{ stats.chatToday }}</div>
           <el-icon class="stat-icon stat-icon-purple"><ChatDotRound /></el-icon>
         </el-card>
       </el-col>
@@ -74,14 +74,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/store/modules/user'
 import { projectApi } from '@/api/project'
+import { flowApi } from '@/api/flow'
+import { knowledgeApi } from '@/api/ai/knowledge'
 
 const { t } = useI18n()
 const userStore = useUserStore()
-const stats = ref({ projectCount: 0 })
+const stats = reactive({ projectCount: 0, flowCount: 0, knowledgeCount: 0, chatToday: 0 })
 
 const avatarText = computed(() => {
   const n = userStore.userInfo?.realName || userStore.userInfo?.username || '?'
@@ -89,10 +91,24 @@ const avatarText = computed(() => {
 })
 
 onMounted(async () => {
-  try {
-    const list = await projectApi.mine()
-    stats.value.projectCount = list.length
-  } catch (e) { /* ignore */ }
+  // Fire 3 real API calls in parallel; chatToday stays 0 until backend lands
+  const results = await Promise.allSettled([
+    projectApi.mine(),
+    flowApi.page({ current: 1, size: 1 }),
+    knowledgeApi.list()
+  ])
+  const [proj, flow, kb] = results
+  if (proj.status === 'fulfilled' && Array.isArray(proj.value)) {
+    stats.projectCount = proj.value.length
+  }
+  if (flow.status === 'fulfilled') {
+    stats.flowCount = (flow.value as any)?.total || 0
+  }
+  if (kb.status === 'fulfilled' && Array.isArray(kb.value)) {
+    stats.knowledgeCount = kb.value.length
+  }
+  // chatToday: backend not implemented — see monitor.chatPending
+  stats.chatToday = 0
 })
 </script>
 

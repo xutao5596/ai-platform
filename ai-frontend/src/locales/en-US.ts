@@ -99,6 +99,9 @@ export default {
     flowCount: 'Flows',
     knowledgeCount: 'Knowledge Base',
     chatToday: 'AI Chat (Today)',
+    errorRate: 'Error Rate',
+    totalFlows: 'Total Flows',
+    totalAssistants: 'Total Assistants',
     welcomeCard: 'Welcome to AI Platform',
     quickStart: 'Quick Start',
     stepCreateProject: 'Create Project',
@@ -352,7 +355,20 @@ export default {
       projectIdRequired: 'Project ID is required',
       saved: 'Saved',
       removeConfirm: 'Delete [{name}]?',
-      removed: 'Deleted'
+      removed: 'Deleted',
+      actionUpload: 'Upload Document',
+      uploadTitle: 'Upload Document — {name}',
+      uploadHint: 'Supports .pdf .docx .txt .md, max 20MB per file',
+      uploadChoose: 'Choose File',
+      uploadBtn: 'Upload',
+      uploadSuccess: 'Uploaded',
+      uploadFailed: 'Upload failed: {msg}',
+      backendPending: 'Backend doc/upload endpoint pending — front-end stub for now',
+      noDoc: 'No documents yet. Click "Upload Document" to start.',
+      colDocName: 'Document',
+      colDocSize: 'Size',
+      colDocStatus: 'Status',
+      colDocTime: 'Uploaded At'
     },
     prompt: {
       title: 'Prompts',
@@ -409,7 +425,32 @@ export default {
       sendFailed: 'Send failed'
     },
     mcp: {
-      placeholder: 'MCP service management coming in Sprint 2'
+      placeholder: 'MCP service management coming in Sprint 2',
+      title: 'MCP Services',
+      add: 'New MCP',
+      searchPlaceholder: 'Name',
+      colName: 'Name',
+      colUrl: 'URL',
+      colType: 'Type',
+      colStatus: 'Status',
+      colDesc: 'Description',
+      colCreateTime: 'Created At',
+      actionEdit: 'Edit',
+      actionDelete: 'Delete',
+      editTitle: 'Edit MCP',
+      addTitle: 'New MCP',
+      formName: 'Name',
+      formUrl: 'Service URL',
+      formType: 'Type',
+      formApiKey: 'API Key',
+      formDesc: 'Description',
+      formStatus: 'Status',
+      nameRequired: 'Please enter name',
+      urlRequired: 'Please enter URL',
+      saved: 'Saved',
+      removeConfirm: 'Delete [{name}]?',
+      removed: 'Deleted',
+      backendPending: 'Backend AiMcpController pending — front-end stub for now'
     }
   },
   flow: {
@@ -749,7 +790,20 @@ export default {
     }
   },
   monitor: {
-    placeholder: 'Global monitor (QPS/P95/error rate/resources) coming in Sprint 4'
+    placeholder: 'Global monitor (QPS/P95/error rate/resources) coming in Sprint 4',
+    title: 'System Monitor',
+    refresh: 'Refresh',
+    lastUpdate: 'Last update: {time}',
+    statFlow: 'Total Flows',
+    statAssistant: 'Total Assistants',
+    statChat: 'Today Chats',
+    statError: 'Error Rate',
+    chartFlowRun: 'Flow Runs (per hour)',
+    chartLogin: 'Logins (per day)',
+    chartNode: 'Node Execution Distribution',
+    chartWebhook: 'Webhook Dispatch (by status)',
+    noData: 'No data',
+    chatPending: 'Waiting for backend /api/v1/assistant/stats/today'
   },
   assistant: {
     new: 'New Assistant',
