@@ -34,7 +34,7 @@
 
         <el-main class="as-main">
           <div v-if="!current" class="empty">
-            <el-icon size="64" color="#dcdfe6"><ChatDotRound /></el-icon>
+            <el-icon size="64" class="empty-icon"><ChatDotRound /></el-icon>
             <p>{{ t('assistant.empty') }}</p>
           </div>
           <div v-else class="messages">
@@ -266,35 +266,36 @@ onMounted(load)
 <style scoped>
 .assistant-page { padding: 0; }
 .as-container { height: calc(100vh - 56px - 32px); }
-.as-aside { background: #f5f7fa; border-right: 1px solid var(--ai-border); transition: width 0.2s; overflow: hidden; }
+.as-aside { background: var(--ai-chat-aside-bg); border-right: 1px solid var(--ai-border); transition: width 0.2s; overflow: hidden; }
 .as-list { padding: 12px; }
 .new-btn { width: 100%; margin-bottom: 12px; }
-.as-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; }
-.as-item:hover { background: #e6e8eb; }
-.as-item.active { background: var(--ai-primary); color: #fff; }
+.as-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; color: var(--ai-text); }
+.as-item:hover { background: var(--ai-bg-hover); }
+.as-item.active { background: var(--ai-primary); color: var(--ai-text-on-primary); }
 .as-item .meta { flex: 1; min-width: 0; }
 .as-item .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .as-item .desc { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.8; }
-.as-header { display: flex; align-items: center; gap: 12px; background: #fff; border-bottom: 1px solid var(--ai-border); padding: 0 16px; height: 56px; }
-.title { font-weight: 600; }
+.as-header { display: flex; align-items: center; gap: 12px; background: var(--ai-bg-elevated); border-bottom: 1px solid var(--ai-border); padding: 0 16px; height: 56px; color: var(--ai-text); }
+.title { font-weight: 600; color: var(--ai-text); }
 .flex-spacer { flex: 1; }
-.as-main { background: #fafbfc; padding: 16px 24px; overflow-y: auto; }
+.as-main { background: var(--ai-chat-main-bg); padding: 16px 24px; overflow-y: auto; }
 .empty { text-align: center; padding-top: 80px; color: var(--ai-text-secondary); }
+.empty-icon { color: var(--ai-text-placeholder); }
 .messages { display: flex; flex-direction: column; gap: 14px; max-width: 800px; margin: 0 auto; }
 .msg { display: flex; gap: 12px; }
 .msg.user { flex-direction: row-reverse; }
-.msg .content { background: #fff; padding: 10px 14px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 75%; }
-.msg.user .content { background: var(--ai-primary); color: #fff; }
-.msg.tool .content { background: #fdf6ec; border-left: 3px solid #e6a23c; }
-.msg.tool_result .content { background: #f0f9eb; border-left: 3px solid #67c23a; }
+.msg .content { background: var(--ai-chat-bubble-bg); color: var(--ai-text); padding: 10px 14px; border-radius: 8px; box-shadow: var(--ai-shadow-sm); max-width: 75%; }
+.msg.user .content { background: var(--ai-chat-bubble-user-bg); color: var(--ai-chat-bubble-user-text); }
+.msg.tool .content { background: var(--ai-chat-tool-bg); border-left: 3px solid var(--ai-warning); }
+.msg.tool_result .content { background: var(--ai-chat-tool-result-bg); border-left: 3px solid var(--ai-success); }
 .msg .content pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 13px; }
 .msg .meta { font-size: 11px; opacity: 0.6; margin-top: 4px; }
 .msg.streaming .content { border: 1px solid var(--ai-primary); }
-.as-footer { display: flex; gap: 8px; align-items: flex-end; background: #fff; border-top: 1px solid var(--ai-border); padding: 12px 16px; }
+.as-footer { display: flex; gap: 8px; align-items: flex-end; background: var(--ai-bg-elevated); border-top: 1px solid var(--ai-border); padding: 12px 16px; }
 .as-footer .el-textarea { flex: 1; }
-.config-aside { background: #fff; border-left: 1px solid var(--ai-border); overflow-y: auto; }
+.config-aside { background: var(--ai-bg-elevated); border-left: 1px solid var(--ai-border); overflow-y: auto; }
 .config-pane { padding: 16px; }
-.config-pane h4 { margin: 0 0 12px; }
+.config-pane h4 { margin: 0 0 12px; color: var(--ai-text); }
 .mt { margin-top: 16px; }
 .m-1 { margin-right: 4px; margin-bottom: 4px; }
 .event-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }

@@ -1,0 +1,354 @@
+/* ===========================================================
+ * Dark Theme Overrides (Sprint 5 - Agent F)
+ * Activated when <html class="dark"> is present.
+ * Overrides Element Plus components + our custom surfaces.
+ * Element Plus 2.9 will switch its own dark tokens via
+ * <html class="dark">; we layer extra fixes on top.
+ * =========================================================== */
+
+:root.dark {
+  color-scheme: dark;
+
+  /* Base */
+  body {
+    background-color: var(--ai-bg);
+    color: var(--ai-text);
+  }
+
+  /* Layout containers */
+  .el-header,
+  .el-footer {
+    background-color: var(--ai-bg-elevated);
+    border-color: var(--ai-border);
+    color: var(--ai-text);
+  }
+  .el-aside {
+    background-color: var(--ai-sidebar-bg);
+    color: var(--ai-sidebar-text);
+  }
+  .el-main {
+    background-color: var(--ai-bg);
+    color: var(--ai-text);
+  }
+
+  /* Cards */
+  .el-card {
+    background-color: var(--ai-bg-elevated);
+    color: var(--ai-text);
+    border-color: var(--ai-border);
+  }
+  .el-card__header {
+    border-bottom-color: var(--ai-border);
+  }
+
+  /* Tables */
+  .el-table {
+    background-color: var(--ai-bg-elevated);
+    color: var(--ai-text);
+    --el-table-bg-color: var(--ai-bg-elevated);
+    --el-table-tr-bg-color: var(--ai-bg-elevated);
+    --el-table-header-bg-color: #232323;
+    --el-table-header-text-color: var(--ai-text);
+    --el-table-row-hover-bg-color: var(--ai-bg-hover);
+    --el-table-border-color: var(--ai-border);
+    --el-table-text-color: var(--ai-text);
+  }
+  .el-table tr {
+    background-color: var(--ai-bg-elevated);
+  }
+  .el-table th.el-table__cell {
+    background-color: #232323;
+    color: var(--ai-text);
+    border-color: var(--ai-border);
+  }
+  .el-table td.el-table__cell {
+    background-color: var(--ai-bg-elevated);
+    color: var(--ai-text);
+    border-color: var(--ai-border);
+  }
+  .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+    background-color: #1c1c1c;
+  }
+  .el-table .el-table__inner-wrapper::before,
+  .el-table .el-table__body-wrapper::before,
+  .el-table .el-table__body-wrapper::after {
+    background-color: var(--ai-border);
+  }
+
+  /* Buttons (translucent) */
+  .el-button {
+    --el-button-bg-color: var(--ai-bg-elevated);
+    --el-button-text-color: var(--ai-text);
+    --el-button-border-color: var(--ai-border);
+  }
+  .el-button.is-plain {
+    --el-button-bg-color: transparent;
+  }
+  .el-button--default:hover {
+    color: var(--ai-primary);
+    border-color: var(--ai-primary);
+    background-color: var(--ai-bg-hover);
+  }
+
+  /* Inputs / Selects / Textarea */
+  .el-input__wrapper,
+  .el-textarea__inner,
+  .el-select__wrapper {
+    background-color: var(--ai-bg-elevated);
+    color: var(--ai-text);
+    box-shadow: 0 0 0 1px var(--ai-border) inset;
+  }
+  .el-input__inner,
+  .el-textarea__inner {
+    color: var(--ai-text);
+  }
+  .el-input__inner::placeholder,
+  .el-textarea__inner::placeholder {
+    color: var(--ai-text-placeholder);
+  }
+  .el-input.is-disabled .el-input__wrapper,
+  .el-textarea.is-disabled .el-textarea__inner {
+    background-color: var(--ai-bg-muted);
+  }
+  .el-select__placeholder {
+    color: var(--ai-text-placeholder);
+  }
+
+  /* Dialog / Drawer / MessageBox */
+  .el-dialog,
+  .el-drawer,
+  .el-message-box,
+  .el-popover,
+  .el-dropdown-menu,
+  .el-select__popper,
+  .el-tooltip__popper {
+    background-color: var(--ai-bg-elevated);
+    color: var(--ai-text);
+    border-color: var(--ai-border);
+  }
+  .el-dialog__title,
+  .el-drawer__title,
+  .el-message-box__title,
+  .el-popper.is-light,
+  .el-popper.is-dark {
+    color: var(--ai-text);
+  }
+  .el-dialog__body,
+  .el-drawer__body,
+  .el-message-box__content,
+  .el-message-box__message {
+    color: var(--ai-text);
+  }
+  .el-overlay {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+  .el-message-box__btns .el-button,
+  .el-dialog__footer .el-button {
+    --el-button-bg-color: var(--ai-bg-elevated);
+  }
+
+  /* Menu (only affects the in-main menu; sidebar menu keeps brand colors) */
+  .el-menu {
+    background-color: transparent;
+    color: var(--ai-text);
+    border-color: var(--ai-border);
+  }
+  .el-menu-item,
+  .el-sub-menu__title {
+    color: var(--ai-text);
+  }
+  .el-menu-item:hover,
+  .el-sub-menu__title:hover {
+    background-color: var(--ai-bg-hover);
+  }
+  .el-menu-item.is-active {
+    color: var(--ai-primary);
+  }
+
+  /* Tags */
+  .el-tag {
+    --el-tag-bg-color: var(--ai-bg-hover);
+    --el-tag-border-color: var(--ai-border);
+    --el-tag-text-color: var(--ai-text);
+  }
+  .el-tag--info {
+    --el-tag-bg-color: #2a2a2a;
+    --el-tag-text-color: #d4d4d4;
+    --el-tag-border-color: #3a3a3a;
+  }
+  .el-tag--success {
+    --el-tag-bg-color: rgba(52, 211, 153, 0.15);
+    --el-tag-text-color: #34d399;
+    --el-tag-border-color: rgba(52, 211, 153, 0.4);
+  }
+  .el-tag--warning {
+    --el-tag-bg-color: rgba(251, 191, 36, 0.15);
+    --el-tag-text-color: #fbbf24;
+    --el-tag-border-color: rgba(251, 191, 36, 0.4);
+  }
+  .el-tag--danger {
+    --el-tag-bg-color: rgba(248, 113, 113, 0.15);
+    --el-tag-text-color: #f87171;
+    --el-tag-border-color: rgba(248, 113, 113, 0.4);
+  }
+
+  /* Pagination */
+  .el-pagination {
+    --el-pagination-bg-color: var(--ai-bg-elevated);
+    --el-pagination-text-color: var(--ai-text);
+    --el-pagination-button-bg-color: var(--ai-bg-elevated);
+    --el-pagination-button-color: var(--ai-text);
+    --el-pagination-button-disabled-color: var(--ai-text-placeholder);
+  }
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next,
+  .el-pager li {
+    background-color: var(--ai-bg-elevated);
+    color: var(--ai-text);
+  }
+
+  /* Descriptions */
+  .el-descriptions {
+    --el-descriptions-bg-color: var(--ai-bg-elevated);
+    --el-descriptions-label-bg-color: #232323;
+    --el-descriptions-content-bg-color: var(--ai-bg-elevated);
+    --el-descriptions-border-color: var(--ai-border);
+    --el-descriptions-item-label-color: var(--ai-text-secondary);
+    --el-descriptions-item-content-color: var(--ai-text);
+  }
+
+  /* Tabs */
+  .el-tabs__nav-wrap::after {
+    background-color: var(--ai-border);
+  }
+  .el-tabs__item {
+    color: var(--ai-text-secondary);
+  }
+  .el-tabs__item.is-active,
+  .el-tabs__item:hover {
+    color: var(--ai-primary);
+  }
+  .el-tabs--card > .el-tabs__header .el-tabs__item.is-active {
+    background-color: var(--ai-bg-elevated);
+    border-color: var(--ai-border);
+    color: var(--ai-text);
+  }
+
+  /* Steps */
+  .el-step__title,
+  .el-step__description {
+    color: var(--ai-text);
+  }
+  .el-step__description.is-finish {
+    color: var(--ai-text-secondary);
+  }
+
+  /* Divider */
+  .el-divider {
+    background-color: var(--ai-divider);
+  }
+
+  /* Form / Inputs darker label */
+  .el-form-item__label {
+    color: var(--ai-text);
+  }
+
+  /* Breadcrumb */
+  .el-breadcrumb__inner,
+  .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+    color: var(--ai-text-secondary);
+  }
+  .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+    color: var(--ai-text);
+  }
+
+  /* Switch */
+  .el-switch__core {
+    border-color: var(--ai-border);
+  }
+
+  /* Empty */
+  .el-empty__description p {
+    color: var(--ai-text-secondary);
+  }
+
+  /* Page containers & custom surfaces */
+  .page-container,
+  .login-box,
+  .config-pane,
+  .config-aside {
+    background-color: var(--ai-bg-elevated);
+    color: var(--ai-text);
+  }
+  .login-tip code {
+    background-color: var(--ai-bg-hover);
+    color: var(--ai-primary);
+  }
+
+  /* Chat surfaces */
+  .chat-aside,
+  .as-aside {
+    background-color: var(--ai-chat-aside-bg);
+    border-color: var(--ai-border);
+  }
+  .chat-main,
+  .as-main {
+    background-color: var(--ai-chat-main-bg);
+  }
+  .chat-header,
+  .as-header,
+  .chat-footer,
+  .as-footer {
+    background-color: var(--ai-bg-elevated);
+    border-color: var(--ai-border);
+  }
+  .message .content,
+  .msg .content {
+    background-color: var(--ai-chat-bubble-bg);
+    color: var(--ai-text);
+    box-shadow: var(--ai-shadow-sm);
+  }
+  .message.user .content,
+  .msg.user .content {
+    background-color: var(--ai-chat-bubble-user-bg);
+    color: var(--ai-chat-bubble-user-text);
+  }
+  .msg.tool .content {
+    background-color: var(--ai-chat-tool-bg);
+    border-left-color: var(--ai-warning);
+  }
+  .msg.tool_result .content {
+    background-color: var(--ai-chat-tool-result-bg);
+    border-left-color: var(--ai-success);
+  }
+  .session-item:hover,
+  .as-item:hover {
+    background-color: var(--ai-bg-hover);
+  }
+  .session-item.active,
+  .as-item.active {
+    background-color: var(--ai-primary);
+    color: #fff;
+  }
+
+  /* Webkit scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #525252;
+  }
+
+  /* Keep a11y focus rings visible */
+  *:focus-visible {
+    outline-color: var(--ai-primary);
+  }
+}

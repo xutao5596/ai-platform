@@ -29,7 +29,7 @@
         </el-header>
         <el-main class="chat-main">
           <div v-if="messages.length === 0" class="empty">
-            <el-icon size="64" color="#dcdfe6"><ChatDotRound /></el-icon>
+            <el-icon size="64" class="empty-icon"><ChatDotRound /></el-icon>
             <p>{{ t('ai.chat.empty') }}</p>
             <p class="hint">{{ t('ai.chat.emptyHint') }}</p>
           </div>
@@ -190,7 +190,7 @@ onMounted(async () => {
 <style scoped>
 .chat-page { padding: 0; }
 .chat-container { height: calc(100vh - 56px - 32px); }
-.chat-aside { background: #f5f7fa; border-right: 1px solid var(--ai-border); transition: width 0.2s; overflow: hidden; }
+.chat-aside { background: var(--ai-chat-aside-bg); border-right: 1px solid var(--ai-border); transition: width 0.2s; overflow: hidden; }
 .session-list { padding: 12px; }
 .new-session { width: 100%; margin-bottom: 12px; }
 .session-item {
@@ -198,35 +198,39 @@ onMounted(async () => {
   padding: 8px 12px; border-radius: 4px;
   cursor: pointer; margin-bottom: 4px;
   font-size: 14px;
+  color: var(--ai-text);
 }
-.session-item:hover { background: #e6e8eb; }
-.session-item.active { background: var(--ai-primary); color: #fff; }
+.session-item:hover { background: var(--ai-bg-hover); }
+.session-item.active { background: var(--ai-primary); color: var(--ai-text-on-primary); }
 .session-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-item .del { opacity: 0.5; }
 .session-item .del:hover { opacity: 1; }
 .chat-header {
   display: flex; align-items: center; gap: 12px;
-  background: #fff; border-bottom: 1px solid var(--ai-border);
+  background: var(--ai-bg-elevated); border-bottom: 1px solid var(--ai-border);
   padding: 0 16px; height: 56px;
+  color: var(--ai-text);
 }
 .header-title { font-weight: 600; flex: 1; }
 .chat-main {
-  background: #fafbfc; padding: 16px 24px;
+  background: var(--ai-chat-main-bg); padding: 16px 24px;
   overflow-y: auto;
 }
 .empty { text-align: center; padding-top: 80px; color: var(--ai-text-secondary); }
 .empty p { margin: 8px 0; }
-.empty .hint { font-size: 12px; color: #909399; }
+.empty .hint { font-size: 12px; color: var(--ai-text-secondary); }
+.empty-icon { color: var(--ai-text-placeholder); }
 .messages { display: flex; flex-direction: column; gap: 16px; max-width: 900px; margin: 0 auto; }
 .message { display: flex; gap: 12px; }
 .message.user { flex-direction: row-reverse; }
 .message .avatar { flex-shrink: 0; }
 .message .content {
-  background: #fff; padding: 12px 16px; border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  background: var(--ai-chat-bubble-bg); padding: 12px 16px; border-radius: 8px;
+  color: var(--ai-text);
+  box-shadow: var(--ai-shadow-sm);
   max-width: 75%;
 }
-.message.user .content { background: var(--ai-primary); color: #fff; }
+.message.user .content { background: var(--ai-chat-bubble-user-bg); color: var(--ai-chat-bubble-user-text); }
 .message .content pre {
   margin: 0; white-space: pre-wrap; word-wrap: break-word;
   font-family: inherit;
@@ -236,7 +240,7 @@ onMounted(async () => {
 
 .chat-footer {
   display: flex; gap: 8px; align-items: flex-end;
-  background: #fff; border-top: 1px solid var(--ai-border);
+  background: var(--ai-bg-elevated); border-top: 1px solid var(--ai-border);
   padding: 12px 16px;
 }
 .chat-footer .el-textarea { flex: 1; }

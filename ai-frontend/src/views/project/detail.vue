@@ -76,7 +76,7 @@ onMounted(load)
 
 <style scoped>
 .detail-header { display: flex; align-items: center; gap: 12px; }
-.title { margin: 0; font-size: 20px; }
+.title { margin: 0; font-size: 20px; color: var(--ai-text); }
 .mt { margin-top: 16px; }
 .flex-spacer { flex: 1; }
 </style>
