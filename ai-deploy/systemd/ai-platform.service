@@ -1,14 +1,16 @@
 # ====================================================================
-# AI-Platform systemd service file
-# Install: sudo cp ai-platform.service /etc/systemd/system/
-# Enable:  sudo systemctl enable ai-platform
-# Start:   sudo systemctl start ai-platform
+# AI-Platform systemd service
+# 安装: sudo cp ai-platform.service /etc/systemd/system/
+# 启用: sudo systemctl enable ai-platform
+# 启动: sudo systemctl start ai-platform
+# 环境变量: 优先读取 /opt/ai-platform/.env(可由 deploy.sh 自动生成)
 # ====================================================================
 
 [Unit]
 Description=AI Platform Backend Service
-Documentation=https://github.com/your-org/ai-platform
+Documentation=https://github.com/xutao5596/ai-platform
 After=network.target mariadb.service
+Wants=mariadb.service
 
 [Service]
 Type=simple
@@ -16,31 +18,39 @@ User=aiplatform
 Group=aiplatform
 WorkingDirectory=/opt/ai-platform
 
-# Java 21 + Production
-Environment="JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
-Environment="SPRING_PROFILES_ACTIVE=prod"
-Environment="JAVA_OPTS=-Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dfile.encoding=UTF-8"
+# 环境变量(若使用 EnvironmentFile 请取消下一行注释)
+# EnvironmentFile=/opt/ai-platform/.env
 
-# Start command
-ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/ai-platform/bin/ai-start-1.0.0.jar \
-    --spring.config.location=/opt/ai-platform/conf/application.yml
+# Java 21 + 生产环境
+Environment=JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+Environment=SPRING_PROFILES_ACTIVE=prod
+Environment=JAVA_OPTS=-Xms1g -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dfile.encoding=UTF-8
+Environment=SERVER_PORT=8080
+Environment=APP_HOME=/opt/ai-platform
+Environment=UPLOAD_PATH=/data/upload
+Environment=HNSW_PATH=/data/hnsw
+Environment=LOG_PATH=/data/logs
 
-# Restart policy
+# 启动命令
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/ai-platform/ai-platform.jar --spring.profiles.active=prod
+
+# 重启策略
 Restart=on-failure
 RestartSec=10
 StartLimitIntervalSec=60
 StartLimitBurst=3
+TimeoutStopSec=30
 
-# Resource limits
+# 资源限制
 LimitNOFILE=65535
 LimitNPROC=65535
 
-# Logging
+# 日志统一走 journal
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=ai-platform
 
-# Security hardening
+# 安全加固
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
