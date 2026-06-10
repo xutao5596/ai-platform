@@ -3,7 +3,7 @@
     <el-container class="chat-container">
       <el-aside :width="showSessions ? '240px' : '0px'" class="chat-aside">
         <div class="session-list">
-          <el-button type="primary" :icon="Plus" class="new-session" @click="onNewSession">新会话</el-button>
+          <el-button type="primary" :icon="Plus" class="new-session" @click="onNewSession">{{ t('ai.chat.newSession') }}</el-button>
           <div
             v-for="s in sessions"
             :key="s.id"
@@ -12,7 +12,7 @@
             @click="selectSession(s)"
           >
             <el-icon><ChatDotRound /></el-icon>
-            <span class="title">{{ s.title || '新会话' }}</span>
+            <span class="title">{{ s.title || t('ai.chat.defaultSessionTitle') }}</span>
             <el-icon class="del" @click.stop="onDeleteSession(s)"><Delete /></el-icon>
           </div>
         </div>
@@ -22,16 +22,16 @@
           <el-button text @click="showSessions = !showSessions">
             <el-icon><Expand v-if="!showSessions" /><Fold v-else /></el-icon>
           </el-button>
-          <span class="header-title">AI 对话</span>
-          <el-select v-model="currentModelId" placeholder="选择模型" style="width: 240px" @change="onModelChange">
+          <span class="header-title">{{ t('nav.aiChat') }}</span>
+          <el-select v-model="currentModelId" :placeholder="t('ai.chat.selectModel')" style="width: 240px" @change="onModelChange">
             <el-option v-for="m in models" :key="m.id" :value="m.id" :label="`${m.name} (${m.provider})`" />
           </el-select>
         </el-header>
         <el-main class="chat-main">
           <div v-if="messages.length === 0" class="empty">
             <el-icon size="64" color="#dcdfe6"><ChatDotRound /></el-icon>
-            <p>开始与 AI 对话</p>
-            <p class="hint">支持 OpenAI / DeepSeek / 通义 / 智谱 / Ollama 等</p>
+            <p>{{ t('ai.chat.empty') }}</p>
+            <p class="hint">{{ t('ai.chat.emptyHint') }}</p>
           </div>
           <div v-else class="messages">
             <div
@@ -47,14 +47,14 @@
               <div class="content">
                 <pre>{{ m.content }}</pre>
                 <div v-if="m.inputTokens" class="meta">
-                  tokens: {{ m.inputTokens + m.outputTokens }} | {{ m.costMs }}ms
+                  tokens: {{ m.inputTokens + (m.outputTokens || 0) }} | {{ m.costMs }}ms
                 </div>
               </div>
             </div>
             <div v-if="sending" class="message assistant streaming">
               <div class="avatar"><el-avatar :size="32" type="primary">AI</el-avatar></div>
               <div class="content">
-                <pre>{{ streamingContent || '正在思考...' }}</pre>
+                <pre>{{ streamingContent || t('ai.chat.thinking') }}</pre>
               </div>
             </div>
           </div>
@@ -64,12 +64,12 @@
             v-model="input"
             type="textarea"
             :rows="3"
-            placeholder="输入消息,Enter 发送,Shift+Enter 换行"
+            :placeholder="t('ai.chat.inputPlaceholder')"
             @keydown.enter.exact.prevent="onSend"
             :disabled="!currentModelId"
           />
           <el-button type="primary" :loading="sending" :disabled="!currentModelId || !input.trim()" @click="onSend">
-            发送
+            {{ t('common.send') }}
           </el-button>
         </el-footer>
       </el-container>
@@ -80,16 +80,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { Plus, ChatDotRound, Delete, Expand, Fold } from '@element-plus/icons-vue'
 import { chatApi, type ChatSessionVO, type ChatMessageVO, type ChatResponse } from '@/api/ai/chat'
 import { modelApi, type ModelVO } from '@/api/ai/model'
+
+const { t } = useI18n()
 
 const sessions = ref<ChatSessionVO[]>([])
 const messages = ref<ChatMessageVO[]>([])
 const currentSessionId = ref<number | null>(null)
 const showSessions = ref(true)
 const models = ref<ModelVO[]>([])
-const currentModelId = ref<number | null>(null)
+const currentModelId = ref<number | null>(0) as any
 const input = ref('')
 const sending = ref(false)
 const streamingContent = ref('')
@@ -123,9 +126,9 @@ function onNewSession() {
 }
 
 async function onDeleteSession(s: ChatSessionVO) {
-  await ElMessageBox.confirm(`删除会话 [${s.title || s.id}]?`, '确认', { type: 'warning' })
+  await ElMessageBox.confirm(t('ai.chat.deleteConfirm', { title: s.title || s.id }), t('common.confirm'), { type: 'warning' })
   await chatApi.removeSession(s.id)
-  ElMessage.success('已删除')
+  ElMessage.success(t('ai.chat.removed'))
   if (currentSessionId.value === s.id) {
     currentSessionId.value = null
     messages.value = []
@@ -149,7 +152,6 @@ async function onSend() {
   sending.value = true
   streamingContent.value = ''
 
-  // Add user message locally
   const userMsg: ChatMessageVO = {
     id: 0, sessionId: currentSessionId.value || 0, role: 'user', content: text, status: 1
   }
@@ -170,7 +172,7 @@ async function onSend() {
     })
     await loadSessions()
   } catch (e) {
-    ElMessage.error('发送失败')
+    ElMessage.error(t('ai.chat.sendFailed'))
   } finally {
     sending.value = false
     streamingContent.value = ''

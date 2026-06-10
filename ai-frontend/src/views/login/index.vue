@@ -4,18 +4,18 @@
     <div class="login-box">
       <div class="login-header">
         <el-icon class="brand"><Cpu /></el-icon>
-        <h1 class="title">AI Platform</h1>
-        <p class="subtitle">企业级 AI 流程自动化编排平台</p>
+        <h1 class="title">{{ t('login.title') }}</h1>
+        <p class="subtitle">{{ t('login.subtitle') }}</p>
       </div>
       <el-form ref="formRef" :model="form" :rules="rules" size="large" @submit.prevent="onSubmit">
         <el-form-item prop="username">
-          <el-input v-model="form.username" placeholder="用户名" :prefix-icon="User" clearable />
+          <el-input v-model="form.username" :placeholder="t('login.username')" :prefix-icon="User" clearable />
         </el-form-item>
         <el-form-item prop="password">
           <el-input
             v-model="form.password"
             type="password"
-            placeholder="密码"
+            :placeholder="t('login.password')"
             :prefix-icon="Lock"
             show-password
             @keyup.enter="onSubmit"
@@ -23,36 +23,38 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="loading" class="login-btn" @click="onSubmit">
-            登 录
+            {{ t('login.submit') }}
           </el-button>
         </el-form-item>
       </el-form>
       <div class="login-tip">
-        <span>默认账号:</span>
-        <code>admin / admin123</code>
+        <span>{{ t('login.defaultTip') }}</span>
+        <code>{{ t('login.defaultAccount') }}</code>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { User, Lock, Cpu } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/modules/user'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const form = reactive({ username: 'admin', password: 'admin123' })
-const rules: FormRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}
+const rules = computed<FormRules>(() => ({
+  username: [{ required: true, message: t('login.usernameRequired'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.passwordRequired'), trigger: 'blur' }]
+}))
 
 async function onSubmit() {
   if (!formRef.value) return
@@ -61,11 +63,11 @@ async function onSubmit() {
   loading.value = true
   try {
     await userStore.login({ username: form.username, password: form.password })
-    ElMessage.success('登录成功')
+    ElMessage.success(t('login.success'))
     const redirect = (route.query.redirect as string) || '/dashboard'
     router.push(redirect)
   } catch (e: any) {
-    ElMessage.error(e?.message || '登录失败')
+    ElMessage.error(e?.message || t('login.failed'))
   } finally {
     loading.value = false
   }

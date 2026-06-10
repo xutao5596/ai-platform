@@ -3,28 +3,28 @@
     <el-row :gutter="16">
       <el-col :span="6">
         <el-card class="stat-card">
-          <div class="stat-label">我的项目</div>
+          <div class="stat-label">{{ t('dashboard.myProjects') }}</div>
           <div class="stat-value">{{ stats.projectCount }}</div>
           <el-icon class="stat-icon" style="color:#409eff;"><Folder /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
-          <div class="stat-label">流程数</div>
+          <div class="stat-label">{{ t('dashboard.flowCount') }}</div>
           <div class="stat-value">0</div>
           <el-icon class="stat-icon" style="color:#10b981;"><Connection /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
-          <div class="stat-label">知识库</div>
+          <div class="stat-label">{{ t('dashboard.knowledgeCount') }}</div>
           <div class="stat-value">0</div>
           <el-icon class="stat-icon" style="color:#f59e0b;"><Reading /></el-icon>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card class="stat-card">
-          <div class="stat-label">AI 对话(今日)</div>
+          <div class="stat-label">{{ t('dashboard.chatToday') }}</div>
           <div class="stat-value">0</div>
           <el-icon class="stat-icon" style="color:#8b5cf6;"><ChatDotRound /></el-icon>
         </el-card>
@@ -33,37 +33,37 @@
 
     <el-row :gutter="16" class="mt">
       <el-col :span="16">
-        <el-card title="欢迎使用 AI Platform">
+        <el-card :title="t('dashboard.welcomeCard')">
           <template #header>
-            <div class="card-title">快速开始</div>
+            <div class="card-title">{{ t('dashboard.quickStart') }}</div>
           </template>
           <el-steps :active="2" align-center>
-            <el-step title="创建项目" description="以项目为单位组织资源" />
-            <el-step title="配置知识库" description="上传文档,智能检索" />
-            <el-step title="拖拽编排流程" description="12 个 AI 节点,5 种触发器" />
-            <el-step title="上线运行" description="API Key / Webhook / 监控" />
+            <el-step :title="t('dashboard.stepCreateProject')" :description="t('dashboard.stepCreateProjectDesc')" />
+            <el-step :title="t('dashboard.stepKb')" :description="t('dashboard.stepKbDesc')" />
+            <el-step :title="t('dashboard.stepFlow')" :description="t('dashboard.stepFlowDesc')" />
+            <el-step :title="t('dashboard.stepOnline')" :description="t('dashboard.stepOnlineDesc')" />
           </el-steps>
           <el-divider />
           <p class="welcome">
-            当前为 <el-tag>Sprint 1 基础就绪</el-tag> 阶段,后续 Sprint 将逐步上线 AI 对话、流程编辑器、AI 助手等核心能力。
+            {{ t('dashboard.sprintTip', { phase: t('dashboard.sprintTag') }) }}
           </p>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card>
-          <template #header><div class="card-title">个人信息</div></template>
+          <template #header><div class="card-title">{{ t('dashboard.profile') }}</div></template>
           <div class="profile">
             <el-avatar :size="56">{{ avatarText }}</el-avatar>
             <div class="profile-info">
               <div class="profile-name">{{ userStore.realName }}</div>
               <div class="profile-meta text-muted">
-                {{ userStore.userInfo?.deptName || '未分配部门' }}
+                {{ userStore.userInfo?.deptName || t('dashboard.noDept') }}
               </div>
               <div class="profile-roles">
                 <el-tag v-for="r in userStore.roles" :key="r" type="info" size="small" class="mr">
                   {{ r }}
                 </el-tag>
-                <el-tag v-if="userStore.isAdmin" type="success" size="small" class="mr">超管</el-tag>
+                <el-tag v-if="userStore.isAdmin" type="success" size="small" class="mr">{{ t('dashboard.superAdmin') }}</el-tag>
               </div>
             </div>
           </div>
@@ -75,9 +75,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/store/modules/user'
 import { projectApi } from '@/api/project'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const stats = ref({ projectCount: 0 })
 

@@ -2,16 +2,16 @@
   <div class="flow-editor-page">
     <div class="editor-toolbar">
       <el-button text @click="$router.push('/flow')">
-        <el-icon><ArrowLeft /></el-icon> 返回
+        <el-icon><ArrowLeft /></el-icon> {{ t('flow.editor.back') }}
       </el-button>
       <el-divider direction="vertical" />
-      <span class="flow-name">{{ flow?.name || '加载中...' }}</span>
-      <el-tag v-if="dirty" type="warning" size="small">未保存</el-tag>
+      <span class="flow-name">{{ flow?.name || t('flow.editor.loading') }}</span>
+      <el-tag v-if="dirty" type="warning" size="small">{{ t('flow.editor.dirty') }}</el-tag>
       <div class="toolbar-right">
-        <el-button :icon="VideoPlay" :loading="running" @click="onRun">运行</el-button>
-        <el-button :icon="Position" @click="onAutoLayout">整理布局</el-button>
-        <el-button :icon="Refresh" @click="onReload">重载</el-button>
-        <el-button type="primary" :icon="Document" :loading="saving" @click="onSave">保存</el-button>
+        <el-button :icon="VideoPlay" :loading="running" @click="onRun">{{ t('flow.editor.actionRun') }}</el-button>
+        <el-button :icon="Position" @click="onAutoLayout">{{ t('flow.editor.actionLayout') }}</el-button>
+        <el-button :icon="Refresh" @click="onReload">{{ t('flow.editor.actionReload') }}</el-button>
+        <el-button type="primary" :icon="Document" :loading="saving" @click="onSave">{{ t('flow.editor.actionSave') }}</el-button>
       </div>
     </div>
 
@@ -24,7 +24,7 @@
         >
           <div class="category-title">
             <el-icon><component :is="cat.icon" /></el-icon>
-            <span>{{ cat.label }}</span>
+            <span>{{ t(cat.labelKey) }}</span>
           </div>
           <div class="category-items">
             <div
@@ -47,7 +47,7 @@
       <aside class="prop-panel">
         <div v-if="!selection" class="prop-empty">
           <el-icon size="48" color="#dcdfe6"><InfoFilled /></el-icon>
-          <p>选中节点查看属性</p>
+          <p>{{ t('flow.editor.selectNode') }}</p>
         </div>
         <div v-else class="prop-content">
           <div class="prop-header">
@@ -55,7 +55,7 @@
             <el-button text :icon="Delete" @click="onDeleteNode" />
           </div>
           <el-form label-position="top" size="small" class="prop-form">
-            <el-form-item label="节点 ID (typeKey)">
+            <el-form-item :label="t('flow.editor.propIdLabel')">
               <el-input :model-value="selection.typeKey" disabled />
             </el-form-item>
             <el-form-item
@@ -75,7 +75,7 @@
                 v-else
                 :model-value="selection.properties[p.key]"
                 disabled
-                placeholder="不支持的控件"
+                :placeholder="t('flow.editor.propUnsupported')"
               />
             </el-form-item>
           </el-form>
@@ -89,6 +89,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import {
   ArrowLeft,
   VideoPlay,
@@ -113,6 +114,7 @@ import type { FlowVO, NodeDefinition, Property } from '@/types/flow'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const flowStore = useFlowStore()
 const flowId = Number(route.params.id)
 
@@ -132,11 +134,11 @@ const canvasContainerRef = ref<HTMLElement | null>(null)
 const lfRef = shallowRef<LogicFlow | null>(null)
 
 const categories = [
-  { key: 'basic' as const, label: '基础', icon: Cpu },
-  { key: 'ai' as const, label: 'AI', icon: MagicStick },
-  { key: 'control' as const, label: '控制', icon: Share },
-  { key: 'tool' as const, label: '工具', icon: Connection },
-  { key: 'data' as const, label: '数据', icon: Operation }
+  { key: 'basic' as const, labelKey: 'flow.editor.categoryBasic', icon: Cpu },
+  { key: 'ai' as const, labelKey: 'flow.editor.categoryAi', icon: MagicStick },
+  { key: 'control' as const, labelKey: 'flow.editor.categoryControl', icon: Share },
+  { key: 'tool' as const, labelKey: 'flow.editor.categoryTool', icon: Connection },
+  { key: 'data' as const, labelKey: 'flow.editor.categoryData', icon: Operation }
 ]
 
 const nodesByCategory = computed<Record<string, NodeDefinition[]>>(() => {
@@ -319,9 +321,9 @@ async function onSave() {
     })
     dirty.value = false
     flowStore.markClean()
-    ElMessage.success('已保存')
+    ElMessage.success(t('common.save'))
   } catch {
-    ElMessage.error('保存失败')
+    ElMessage.error(t('flow.editor.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -329,7 +331,7 @@ async function onSave() {
 
 async function onReload() {
   if (dirty.value) {
-    await ElMessageBox.confirm('当前有未保存改动,确定重新加载?', '确认', { type: 'warning' })
+    await ElMessageBox.confirm(t('flow.editor.reloadConfirm'), t('common.confirm'), { type: 'warning' })
       .catch(() => null)
       .then(r => { if (!r) throw new Error('cancel') })
   }
@@ -337,11 +339,11 @@ async function onReload() {
   initLogicFlow(flow.value?.design)
   selection.value = null
   dirty.value = false
-  ElMessage.success('已重载')
+  ElMessage.success(t('flow.editor.reloaded'))
 }
 
 function onAutoLayout() {
-  ElMessage.info('LogicFlow 2.x 暂不内置自动布局,使用整理节点位置可在 v2 后续加入')
+  ElMessage.info(t('flow.editor.layoutTip'))
 }
 
 async function onRun() {
@@ -349,21 +351,21 @@ async function onRun() {
   running.value = true
   try {
     const { value: inputJson } = await ElMessageBox.prompt(
-      '输入 JSON (可空)',
-      '运行流程',
-      { inputPlaceholder: '{}', inputType: 'textarea' }
+      t('flow.editor.runDialogTitle'),
+      t('flow.editor.runDialogTitle'),
+      { inputPlaceholder: t('flow.editor.runInputPlaceholder'), inputType: 'textarea' }
     ).catch(() => ({ value: '{}' }))
     let input: any
     try {
       input = inputJson ? JSON.parse(inputJson) : {}
     } catch {
-      ElMessage.error('JSON 格式错误')
+      ElMessage.error(t('flow.editor.runJsonError'))
       return
     }
     const run = await runApi.run(flowId, { input })
-    ElMessage.success(`运行完成: ${run.status} (${run.costMs ?? 0}ms)`)
+    ElMessage.success(t('flow.editor.runSuccess', { status: run.status, cost: run.costMs ?? 0 }))
   } catch (e: any) {
-    if (e?.message !== 'cancel') ElMessage.error('运行失败')
+    if (e?.message !== 'cancel') ElMessage.error(t('flow.editor.runFailed'))
   } finally {
     running.value = false
   }
