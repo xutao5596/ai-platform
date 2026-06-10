@@ -34,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/v1/auth/refresh",
             "/api/v1/auth/captcha",
             "/api/v1/webhook/**",
+            "/api/v1/ext/**",
             "/api/v1/public/**",
             "/druid/**",
             "/doc.html",

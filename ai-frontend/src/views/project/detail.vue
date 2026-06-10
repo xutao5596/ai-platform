@@ -7,6 +7,7 @@
       <h2 class="title">{{ project?.name || '项目详情' }}</h2>
       <div class="flex-spacer" />
       <el-button @click="$router.push(`/project/${id}/members`)">成员管理</el-button>
+      <el-button @click="$router.push(`/project/${id}/apikeys`)">API Keys</el-button>
     </div>
 
     <el-tabs v-model="active" class="mt">
