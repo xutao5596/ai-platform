@@ -489,7 +489,7 @@ async function persist(design: any) {
     description: flow.value.description,
     isAssistant: flow.value.isAssistant,
     status: flow.value.status,
-    design
+    design: typeof design === 'string' ? design : JSON.stringify(design)
   })
 }
 
