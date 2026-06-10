@@ -367,6 +367,12 @@ function initLogicFlow(initialData?: any) {
   const data = normalizeDesignData(initialData, nodeDefs.value)
   if (data.nodes.length > 0) {
     lf.render(data)
+    // LF 2.x: pan & zoom to fit all nodes. Without this, design data with
+    // off-canvas x/y (e.g. 0,0) leaves the user staring at an empty grid.
+    try {
+      const lm = (lf as any).graphModel
+      if (lm && typeof lm.fitView === 'function') lm.fitView(40, 40)
+    } catch { /* non-fatal */ }
   } else {
     lf.render({ nodes: [], edges: [] })
   }
@@ -665,7 +671,9 @@ onBeforeUnmount(() => {
 }
 .search-result { font-size: 12px; color: var(--ai-text-secondary); }
 .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
-.editor-body { flex: 1; display: flex; min-height: 0; }
+.editor-body { flex: 1; display: flex; min-height: 0; min-width: 0; }
+.node-panel, .prop-panel { height: 100%; }
+.canvas-wrapper { flex: 1; min-width: 0; min-height: 0; height: 100%; }
 
 .node-panel {
   width: 240px; flex-shrink: 0;
