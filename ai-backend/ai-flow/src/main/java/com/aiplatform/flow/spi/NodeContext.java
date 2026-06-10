@@ -44,6 +44,9 @@ public class NodeContext implements Serializable {
     /** 用户 ID(执行触发人) */
     private Long userId;
 
+    /** 全局节点 spec 映射(nodeId -> NodeSpec),由 FlowRunner 设置 */
+    private java.util.concurrent.ConcurrentHashMap<String, com.aiplatform.flow.chain.ChainBuilder.NodeSpec> specMap;
+
     public NodeContext() {
         this.input = new HashMap<>();
         this.variables = new ConcurrentHashMap<>();
@@ -66,6 +69,14 @@ public class NodeContext implements Serializable {
 
     public Object getConfig(String key) {
         return nodeConfig == null ? null : nodeConfig.get(key);
+    }
+
+    public void setSpecMap(java.util.concurrent.ConcurrentHashMap<String, com.aiplatform.flow.chain.ChainBuilder.NodeSpec> specMap) {
+        this.specMap = specMap;
+    }
+
+    public com.aiplatform.flow.chain.ChainBuilder.NodeSpec getSpec(String nodeId) {
+        return specMap == null ? null : specMap.get(nodeId);
     }
 
     public String getConfigString(String key) {

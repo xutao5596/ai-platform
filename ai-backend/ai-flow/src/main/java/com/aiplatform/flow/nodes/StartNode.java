@@ -80,6 +80,10 @@ public class StartNode extends NodeComponent implements FlowNode {
     @Override
     public void process() throws Exception {
         NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx != null) {
+            var spec = ctx.getSpec(this.getNodeId());
+            if (spec != null) ctx.setNodeConfig(spec.config);
+        }
         if (ctx == null) {
             log.warn("StartNode 收到空 NodeContext,跳过");
             return;

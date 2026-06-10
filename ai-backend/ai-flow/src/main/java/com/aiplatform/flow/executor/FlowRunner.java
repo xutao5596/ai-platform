@@ -70,6 +70,14 @@ public class FlowRunner {
             ctx.setInput(input == null ? new HashMap<>() : input);
             ctx.setVariables(new ConcurrentHashMap<>());
 
+            // 把 NodeSpec 按 id 索引存到 ctx,让各节点 process() 能读到自己的 config
+            java.util.concurrent.ConcurrentHashMap<String, com.aiplatform.flow.chain.ChainBuilder.NodeSpec> specMap = new java.util.concurrent.ConcurrentHashMap<>();
+            for (com.aiplatform.flow.chain.ChainBuilder.NodeSpec s : specs) {
+                // key = typeKey 因为 LiteFlow 节点 id = typeKey,这样 process() 能按组件 id 查 spec
+                specMap.put(s.typeKey, s);
+            }
+            ctx.setSpecMap(specMap);
+
             String chainId = compileChain(flow.getId(), specs);
             long liteflowStart = System.currentTimeMillis();
             LiteflowResponse liteResp = flowExecutor.execute2Resp(chainId, null, ctx);

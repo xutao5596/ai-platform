@@ -109,11 +109,18 @@ public class PromptNode extends NodeComponent implements FlowNode {
     @Override
     public void process() throws Exception {
         NodeContext ctx = this.getContextBean(NodeContext.class);
+        if (ctx != null) {
+            var spec = ctx.getSpec(this.getNodeId());
+            if (spec != null) ctx.setNodeConfig(spec.config);
+        }
         if (ctx == null) {
             log.warn("PromptNode 收到空 NodeContext,跳过");
             return;
         }
-        execute(ctx);
+        NodeExecuteResult r = execute(ctx);
+        if (r != null && !r.isSuccess()) {
+            throw new RuntimeException(r.getErrorMsg() == null ? "Node execution failed" : r.getErrorMsg());
+        }
     }
 
     private String render(String template, NodeContext ctx) {
